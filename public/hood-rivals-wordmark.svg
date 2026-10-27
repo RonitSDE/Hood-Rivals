@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 442 80" role="img" aria-labelledby="t d">
+  <title id="t">Hood Rivals wordmark</title><desc id="d">Lime H crest and the Hood Rivals name on a transparent background.</desc>
+  <rect x="4" y="4" width="72" height="72" rx="17" fill="#C9EF91"/>
+  <path d="M21 20h11v13h16V20h11v40H48V46H32v14H21V20Z" fill="#142820"/>
+  <path d="m40 34 6 6-6 6-6-6 6-6Z" fill="#F7C969"/>
+  <text x="97" y="38" fill="#F1F1DA" font-family="Arial,Helvetica,sans-serif" font-size="30" font-weight="900" letter-spacing="3">HOOD</text>
+  <text x="99" y="64" fill="#C9EF91" font-family="Arial,Helvetica,sans-serif" font-size="21" font-weight="900" letter-spacing="7">RIVALS</text>
+</svg>

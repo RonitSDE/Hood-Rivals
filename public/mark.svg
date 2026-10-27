@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="t d">
+  <title id="t">Hood Rivals</title><desc id="d">A pixel H crest with two rival towers joined at the centre.</desc>
+  <rect width="64" height="64" rx="15" fill="#C9EF91"/>
+  <path d="M15 15h10v12h14V15h10v34H39V37H25v12H15V15Z" fill="#142820"/>
+  <path d="M25 15v7h14v-7" fill="none" stroke="#142820" stroke-width="2"/>
+  <path d="m32 27 5 5-5 5-5-5 5-5Z" fill="#F7C969"/>
+  <path d="M11 54h42" stroke="#142820" stroke-width="2" opacity=".45"/>
+</svg>
