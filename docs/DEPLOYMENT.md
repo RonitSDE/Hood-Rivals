@@ -10,7 +10,7 @@ Build with Node24. Use `npm ci` and the committed lockfile. For Docker, copy `.e
 
 Run exactly **one API process/replica**. SQLite WAL and its volume must be persistent. Multiple Node processes could run overlapping timers and are unsupported here. The reverse proxy should provide distributed/public rate limiting; the service's per-IP limit is an additional local bound. It intentionally does not trust arbitrary forwarded IP headers.
 
-Do not expose `.env`, SQLite, backups, launch preparations or deployer keys. Dist is the only served static directory. The runtime user is non-root. The Docker image retains build/test packages for convenient developer operations; a hardened production supply-chain image can strip them after compiling runtime TS to JS. Never bake secrets into the image.
+Do not expose `.env`, SQLite, backups, launch preparations or deployer keys. Dist is the only served static directory. The runtime user is non-root. The Docker runtime layer prunes development dependencies; production still executes TS through `tsx`. Never bake secrets into the image.
 
 ## Keys and roles
 

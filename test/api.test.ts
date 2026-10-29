@@ -250,6 +250,10 @@ test("timeout resolution, persistence and one daily ranked attempt", async () =>
   }
   try {
     await call("/session", {});
+    assert.equal((await call("/matches", { mode: "weekly" })).status, 403);
+    const rankedUser = (await call("/bootstrap")).data.profile.id;
+    runtime.db.prepare("UPDATE users SET wallet=?,onboarded=1 WHERE id=?")
+      .run("0x0000000000000000000000000000000000000001", rankedUser);
     const m = await call("/matches", { mode: "weekly" });
     runtime.db
       .prepare("UPDATE matches SET deadline=0 WHERE id=?")
@@ -266,6 +270,13 @@ test("timeout resolution, persistence and one daily ranked attempt", async () =>
       assert.equal(r.status, 200, JSON.stringify(r.data));
       completedRounds++;
     }
+    const publicBoard = await fetch(`http://127.0.0.1:${port}/api/leaderboard`).then(r=>r.json());
+    assert.equal(publicBoard.entries[0].matchId,m.data.id);
+    assert.equal(publicBoard.entries[0].score,(runtime.db.prepare('SELECT score FROM results WHERE match_id=?').get(m.data.id) as any).score);
+    assert.equal(publicBoard.me,null);
+    const publicProof = await fetch(`http://127.0.0.1:${port}/api/replays/${m.data.id}`).then(r=>r.json());
+    assert.equal(publicProof.verified,true);
+    assert.match(publicProof.verification,/not independent or onchain/i);
     assert.equal((await call("/matches", { mode: "weekly" })).status, 400);
     const profile = (await call("/bootstrap")).data.profile;
     await new Promise<void>((r) => server.close(() => r()));
@@ -286,4 +297,47 @@ test("timeout resolution, persistence and one daily ranked attempt", async () =>
     runtime.close();
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test("ranked leaderboard shows real completed results, stable ranks and a personal place beyond top 30", async () => {
+  const runtime = createApp({...config,db:':memory:',production:false,origin:'http://test'});
+  const server = runtime.app.listen(0);
+  await new Promise<void>(r=>server.once('listening',r));
+  const base=`http://127.0.0.1:${(server.address() as any).port}/api`;
+  try {
+    const session = await fetch(base+'/session',{method:'POST',headers:{origin:'http://test','Content-Type':'application/json'},body:'{}'});
+    const cookie=session.headers.get('set-cookie')!.split(';')[0];
+    const boot=await fetch(base+'/bootstrap',{headers:{cookie}}).then(r=>r.json());
+    const me=boot.profile.id,now=Date.now();
+    const empty=await fetch(base+'/leaderboard',{headers:{cookie}}).then(r=>r.json());
+    assert.deepEqual(empty.entries,[]);
+    assert.equal(empty.total,0);
+    const insertUser=runtime.db.prepare('INSERT INTO users(id,name,wallet,onboarded) VALUES (?,?,?,1)');
+    const insertMatch=runtime.db.prepare("INSERT INTO matches(id,mode,status,created) VALUES (?,'weekly','finished',?)");
+    const insertResult=runtime.db.prepare('INSERT INTO results(match_id,user_id,score,won,created) VALUES (?,?,?,?,?)');
+    runtime.db.prepare('UPDATE users SET wallet=?,onboarded=1 WHERE id=?').run('0x00000000000000000000000000000000000000aa',me);
+    insertMatch.run('mine',now);insertResult.run('mine',me,1,0,now);
+    for(let i=0;i<31;i++){
+      const id='rival'+i,match='match'+i;
+      insertUser.run(id,'Rival '+i,'0x'+(i+1).toString(16).padStart(40,'0'));
+      insertMatch.run(match,now);insertResult.run(match,id,100-i,0,now+i);
+    }
+    insertMatch.run('rival1-tie',now);insertResult.run('rival1-tie','rival1',100,0,now+1000);
+    insertMatch.run('mine-better',now);insertResult.run('mine-better',me,2,0,now+100);
+    runtime.db.prepare('INSERT INTO users(id,name) VALUES (?,?)').run('guest','Guest');
+    insertMatch.run('guest-match',now);insertResult.run('guest-match','guest',999,1,now);
+    insertMatch.run('old-match',now-8*86400000);insertResult.run('old-match',me,999,1,now-8*86400000);
+    const board=await fetch(base+'/leaderboard',{headers:{cookie}}).then(r=>r.json());
+    assert.equal(board.total,32);
+    assert.equal(board.entries.length,30);
+    assert.equal(board.entries[0].name,'Rival 0');
+    assert.equal(board.entries[0].matchId,'match0');
+    assert.equal(board.entries[1].name,'Rival 1');
+    assert.equal(board.entries[29].rank,30);
+    assert.equal(board.me.rank,32);
+    assert.equal(board.me.score,2);
+    assert.equal(board.me.attempts,2);
+    assert.equal('wallet' in board.entries[0],false);
+    assert.equal(board.entries.some((p:any)=>p.name==='Guest'),false);
+  }finally{await runtime.close();await new Promise<void>(r=>server.close(()=>r()))}
 });

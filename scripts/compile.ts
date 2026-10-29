@@ -3,7 +3,7 @@ import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 export function compile() {
   const sources = Object.fromEntries(
-    ["OutpostStore.sol", "MockToken.sol"].map((n) => [
+    ["OutpostStore.sol", "MockToken.sol", "RivalAgentID.sol"].map((n) => [
       n,
       { content: readFileSync(resolve("contracts", n), "utf8") },
     ]),

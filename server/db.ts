@@ -12,12 +12,16 @@ export function database(path: string) {
  CREATE TABLE IF NOT EXISTS players(match_id TEXT REFERENCES matches(id),slot INTEGER,user_id TEXT REFERENCES users(id),order_json TEXT,PRIMARY KEY(match_id,slot),UNIQUE(match_id,user_id));
  CREATE TABLE IF NOT EXISTS snapshots(match_id TEXT,round INTEGER,state TEXT,orders TEXT,previous TEXT,digest TEXT,PRIMARY KEY(match_id,round));
  CREATE TABLE IF NOT EXISTS results(match_id TEXT,user_id TEXT,score INTEGER,won INTEGER,created INTEGER,PRIMARY KEY(match_id,user_id));
+ CREATE INDEX IF NOT EXISTS results_ranked_time ON results(created DESC,match_id,user_id);
+ CREATE INDEX IF NOT EXISTS matches_mode_status ON matches(mode,status);
  CREATE TABLE IF NOT EXISTS attempts(user_id TEXT,day TEXT,match_id TEXT,PRIMARY KEY(user_id,day));
  CREATE TABLE IF NOT EXISTS inventory(user_id TEXT,sku TEXT,order_id TEXT UNIQUE,PRIMARY KEY(user_id,sku));
  CREATE TABLE IF NOT EXISTS orders(id TEXT PRIMARY KEY,user_id TEXT,payload TEXT,signature TEXT,status TEXT DEFAULT 'pending',tx TEXT UNIQUE);
  CREATE TABLE IF NOT EXISTS campaign(user_id TEXT REFERENCES users(id),match_id TEXT REFERENCES matches(id),created INTEGER NOT NULL,won INTEGER NOT NULL,score INTEGER NOT NULL,moment TEXT NOT NULL,PRIMARY KEY(user_id,match_id));
  CREATE INDEX IF NOT EXISTS campaign_user_time ON campaign(user_id,created DESC);
  CREATE TABLE IF NOT EXISTS cache(key TEXT PRIMARY KEY,value TEXT);
+ CREATE TABLE IF NOT EXISTS agent_links(user_id TEXT PRIMARY KEY REFERENCES users(id),token_id INTEGER UNIQUE NOT NULL);
+ CREATE TABLE IF NOT EXISTS agent_memories(token_id INTEGER PRIMARY KEY,memory TEXT NOT NULL DEFAULT '{}',style TEXT NOT NULL DEFAULT 'balanced',played INTEGER NOT NULL DEFAULT 0,wins INTEGER NOT NULL DEFAULT 0);
  `);
   const columns = db.prepare("PRAGMA table_info(users)").all() as {name:string}[];
   if(!columns.some(c=>c.name==="onboarded")){
@@ -26,6 +30,10 @@ export function database(path: string) {
     // ask linked accounts to choose an identity in the new three-outpost world.
   }
   if(!columns.some(c=>c.name==="rival_memory")) db.exec("ALTER TABLE users ADD COLUMN rival_memory TEXT NOT NULL DEFAULT '{}'");
+  if(!columns.some(c=>c.name==="guide_seen")) db.exec("ALTER TABLE users ADD COLUMN guide_seen INTEGER NOT NULL DEFAULT 0");
+  const matchColumns=db.prepare('PRAGMA table_info(matches)').all() as {name:string}[];
+  if(!matchColumns.some(c=>c.name==='control')) db.exec("ALTER TABLE matches ADD COLUMN control TEXT NOT NULL DEFAULT 'human'");
+  if(!matchColumns.some(c=>c.name==='agent_token_id')) db.exec('ALTER TABLE matches ADD COLUMN agent_token_id INTEGER');
   return db;
 }
 export type DB = ReturnType<typeof database>;

@@ -115,8 +115,8 @@ export function shop(db: DB, c: Config, injectedProvider?: JsonRpcProvider) {
       store: c.store,
       displayAmount:
         asset === "stable"
-          ? `${item.priceCents / 100} USDG`
-          : `${(Number(c.tokenUnitsPerDollar) * item.priceCents) / 100} RIVAL`,
+          ? `${item.priceCents / 100} ${c.chainId === 46630 ? "test USDG" : "USDG"}`
+          : `${(Number(c.tokenUnitsPerDollar) * item.priceCents) / 100} ${c.chainId === 46630 ? "test RIVAL" : "RIVAL"}`,
     };
     db.prepare(
       "INSERT INTO orders(id,user_id,payload,signature) VALUES (?,?,?,?)",

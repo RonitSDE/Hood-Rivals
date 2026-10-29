@@ -47,6 +47,8 @@ test('practice waits without a timer, earns nothing, can be left; rival memory r
     assert.equal(state.factions[1].memory['0'],-2);assert.equal(state.factions[2].memory['0'],1);
     assert.equal((await call(`/matches/${solo}/leave`,{})).status,403);
     runtime.db.prepare("UPDATE matches SET status='finished' WHERE id=?").run(solo);
+    runtime.db.prepare("UPDATE users SET wallet=?,onboarded=1 WHERE id=?")
+      .run('0x0000000000000000000000000000000000000001',before.profile.id);
     const ranked=(await call('/matches',{mode:'weekly'})).data.id;
     let rankedState=(await call('/matches/'+ranked)).data;
     while(rankedState.status==='active'){

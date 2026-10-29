@@ -1025,7 +1025,7 @@ function renderWatch(){
   let h=`<div class="wh"><span class="lbl">${director?'DIRECTOR PICK':'FOLLOWING YOUR PICK'}</span><button class="pin-agent" data-pin-current="${a.id}" aria-pressed="${pinned.has(a.id)}">${pinned.has(a.id)?'★ Pinned':'☆ Pin'}</button><span class="nav"><button id="prevA" aria-label="Previous agent">◀</button><button id="nextA" aria-label="Next agent">▶</button></span></div>
   <div class="idrow"><img class="pt" src="${a.portrait}" alt="">
    <div><div class="nm">${esc(a.name)}</div>
-   <div class="sub"><span><i style="background:${T.color}"></i>${b.name}</span><span>LV ${a.lvl}</span><span style="color:var(--fg)">${roleName(a.role)}</span>${a.captain?'<span style="color:var(--amber)">★ Captain</span>':''}</div>
+   <div class="sub"><span><i style="background:${T.color}"></i>${b.name}</span><span>LV ${a.lvl}</span><span style="color:var(--fg)">${roleName(a.role)}</span>${a.captain?'<span style="color:var(--amber)">★ Captain</span>':''}${a.captain&&linkedCaptain?.faction===a.team&&linkedCaptain.agentId?`<span class="chip" style="color:${['#c7f76d','#5ee5c2','#f6c478','#ce9cff'][linkedCaptain.agentLook?.[0]??0]}">◆ Agent ID #${linkedCaptain.agentId}</span>`:''}</div>
    <div class="act" style="color:${actCol}">${a.dead?'✝':'⚔'} ${esc(act[0].toUpperCase()+act.slice(1))}</div>
    <div class="sub" style="margin-top:3px">Life ${a.deaths+1} · ${a.goalsDone} goal${a.goalsDone===1?'':'s'} fulfilled</div></div></div>
   <div class="sec" style="border:none;padding-top:8px;margin-top:4px"><div class="row2"><span class="lbl">Health</span><span class="mono">${Math.round(a.hp)}/${a.maxHp}</span></div><div class="bar"><i style="width:${(f*100).toFixed(1)}%;background:${f>0.5?'var(--good)':f>0.25?'var(--amber)':'var(--bad)'}"></i></div>
@@ -1169,7 +1169,9 @@ window.addEventListener('message',e=>{
   if(e.data?.type!=='OUTPOST_CAPTAIN')return;
   const name=e.data.name,faction=e.data.faction;
   if(typeof name!=='string'||name.length<2||name.length>24||!/^[\w \-']+$/.test(name)||!Number.isInteger(faction)||faction<0||faction>2)return;
-  linkedCaptain={name,faction};applyLinkedCaptain();
+  const agentId=Number.isInteger(e.data.agentId)&&e.data.agentId>=1&&e.data.agentId<=3333?e.data.agentId:null;
+  const agentLook=Array.isArray(e.data.agentLook)&&e.data.agentLook.length===3&&e.data.agentLook.every(x=>Number.isInteger(x)&&x>=0&&x<4)?e.data.agentLook:null;
+  linkedCaptain={name,faction,agentId,agentLook};applyLinkedCaptain();
 });
 buildSprites();buildTeamSprites();buildMonsters();
 if(window.innerWidth<900)zi=1;

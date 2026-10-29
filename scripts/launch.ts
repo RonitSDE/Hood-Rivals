@@ -41,7 +41,7 @@ const prepared = await call("/launches/prepare", {
     editable_metadata: false,
     extra_metadata: [],
     image_base64: readFileSync(
-      process.env.TOKEN_IMAGE || "public/token.png",
+      process.env.TOKEN_IMAGE || "public/hood-rivals-logo.png",
     ).toString("base64"),
     image_type: "image/png",
   },

@@ -156,6 +156,7 @@ canvas#world.drag{cursor:grabbing}
 }
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
 
+
 /* Observatory edition: preserve the pixel world and give it a considered frame. */
 :root{
   --bg:#080d0e;--panel:rgba(12,19,20,.91);--panel2:#182425;--line:#3b4a45;--line2:#61716a;
@@ -186,11 +187,7 @@ body{
   letter-spacing:.14em;text-shadow:0 2px 14px rgba(0,0,0,.32);
 }
 .brand .crest{
-  display:grid;place-items:center;width:42px;height:42px;flex:none;
-  border:1px solid #d5bc80;border-radius:11px;
-  background:linear-gradient(145deg,#4b5d4b,#192d2b 72%);
-  box-shadow:inset 0 1px rgba(255,255,255,.26),0 0 24px rgba(245,195,113,.12);
-  object-fit:cover;letter-spacing:0;transform:rotate(-3deg);
+  display:block;width:178px;height:71px;object-fit:contain;flex:none;
 }
 .brand .brand-name span{color:#f6cb79}
 .brand small{
@@ -360,7 +357,7 @@ body{
   body{padding:8px 8px 18px}
   .top{padding:9px;gap:9px}
   .brand{min-width:auto;font-size:15px}
-  .brand .crest{height:35px;width:35px;font-size:20px}
+  .brand .crest{height:62px;width:155px}
   .ctrls{width:100%;margin-left:0;order:2}
   .ctrls button{min-height:32px}
   .chipbar{order:3}
@@ -446,12 +443,23 @@ body.embedded .stage{height:100%;border:0;border-radius:0}
 .embedded .watch,.embedded .right{top:96px;bottom:110px;left:8px!important;right:8px!important;width:auto}.embedded .banner{top:97px;left:12px;width:calc(100% - 24px);max-width:none;transform:none}.embedded .banner .sum{font-size:10px}.embedded .mini{width:105px;bottom:98px;right:9px;padding:5px}.embedded .mini .lbl{font-size:8px}.embedded .mini canvas{height:65px;width:100%}.embedded .feed{display:none}.island-compass{bottom:45px;max-width:calc(100% - 16px)}.island-compass>span{display:none}.embedded .hint{font-size:8px;bottom:12px;padding:6px 8px}.embedded .stage.mobile-inspect .mini,.embedded .stage.mobile-teams .mini,.embedded .stage.mobile-inspect .banner,.embedded .stage.mobile-teams .banner{display:none}
 }
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+:root{--bg:#091510;--panel:rgba(10,27,19,.93);--panel2:#173125;--line:#3b6249;--line2:#69875a;--amber:#c7f76d;--good:#b6ee74;--teal:#67e0bb}
+html,body{background:#091510}.stage,.viewport,.embedded .viewport{background:#123529}.brand .brand-name span{color:#c7f76d}.signal-dot{background:#c7f76d;box-shadow:0 0 12px #c7f76d}.ctrls button.on{background:#294c30;border-color:#b0e36c;color:#e7ffba}
+/* Vivid observatory palette; retain readable material and faction colors. */
+:root{--bg:#081424;--panel:rgba(11,28,47,.94);--panel2:#133147;--line:#365b72;--line2:#508b9a;--fg:#f2f7ff;--muted:#adc2d2;--label:#c6d9e7;--amber:#ffcc5d;--good:#b5ff39;--bad:#ff7283;--mind:#c79bff;--teal:#37dfe1}
+html,body{background:#081424}.stage,.viewport,.embedded .viewport{background:#123c48}
+body{background:radial-gradient(ellipse 65% 65% at 45% -12%,#178eaf47,transparent 72%),radial-gradient(ellipse 36% 60% at 100% 85%,#6d3db53a,transparent 78%),#081424}
+.top{border-color:#427b8c;background:linear-gradient(115deg,#163b52,#0c223b 58%,#223451)}
+.tchip{background:#1b4055;border-color:#43778b;color:#e8f7ff}
+.brand .brand-name span{color:#b5ff39}.brand small{color:#9cdad9}.signal-dot{background:#b5ff39;box-shadow:0 0 12px #b5ff39}
+.ctrls button.on{background:#215a69;border-color:#31dfd2;color:#efffff}
+.watch,.right .card,.feed,.embedded .watch,.embedded .right,.embedded .feed,.embedded .mini,.embedded .banner .bx{background:#10273bea;border-color:#437b93}
 </style>
 </head>
 <body>
 <div class="app">
   <div class="top">
-    <div class="brand"><img class="crest" src="/mark.svg" alt=""><span class="brand-name">HOOD <span>RIVALS</span><small>THE WORLD KEEPS MOVING</small></span></div>
+    <div class="brand"><img class="crest" src="/hood-rivals-logo.png" alt="Hood Rivals"><span class="brand-name"><small>THE WORLD KEEPS MOVING</small></span></div>
     <div class="tchip signal" title="This preview runs entirely in your browser"><span class="signal-dot"></span>LOCAL WORLD SIMULATION</div>
     <div class="chipbar" id="chipbar"></div>
     <div class="ctrls" role="group" aria-label="Simulation controls">

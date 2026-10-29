@@ -1,6 +1,6 @@
-# Hood Rivals v1.6.0 — beta deployment candidate
+# Hood Rivals v2.1.0 — Robinhood testnet beta source
 
-Read `docs/RELEASE_V1.6.0.md` for verified scope, known limits and the deployment gate.
+Read `docs/RELEASE_V2.1.0.md` for verified scope, known limits and the deployment gate.
 
 With Node 24:
 
@@ -12,4 +12,4 @@ npm test
 npm start
 ```
 
-Open http://localhost:3000. Guest play needs no wallet or contracts. Checkout remains disabled until contracts, signer and assets are deployed and configured. Preserve the SQLite volume across deployments. Use a browser extension or the in-app browser of a mobile wallet; QR pairing is unavailable in this release.
+Open http://localhost:3000. Guest play needs no wallet or contracts. The Agent ID mint requires a separately deployed and opened testnet collection; checkout remains disabled until contracts, signer and assets are deployed and configured. Preserve the SQLite volume across deployments because it holds Agent ID tactical memory. Log in uses RainbowKit. Browser extension wallets work without extra setup. QR pairing needs `VITE_WALLETCONNECT_PROJECT_ID` before the production build.

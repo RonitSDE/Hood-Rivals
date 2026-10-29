@@ -4,9 +4,10 @@ const LazyWorld=lazy(()=>import('./World').then(m=>({default:m.World})));
 function World(props:any){const snapshot=JSON.stringify(props.game);const stableGame=useMemo(()=>props.game,[snapshot]);return <Suspense fallback={<div className="world world-loading" role="status">Preparing your tactical world…</div>}><LazyWorld {...props} game={stableGame}/></Suspense>}
 import { Dialog } from "./Dialog";
 import { matchRecap, trainingMove } from "../shared/experience";
-import { shareBattle, downloadBattleCard } from "./share";
+import { shareBattle, downloadBattleCard, shareRankings, downloadRankingsCard } from "./share";
 import { WalletProviders, connectWithRainbowKit, walletConfig } from "./wallet";
 import { disconnect, getAccount, signMessage, switchChain } from "@wagmi/core";
+import { narrate, playCue, stopNarration } from './sound';
 import {
   createGame,
   FACTIONS,
@@ -43,11 +44,31 @@ preview.tiles.forEach((t, i) => {
 function CaptainPortrait({faction=0}:{faction?:number}) {
   return <svg className="captain-portrait" viewBox="0 0 32 32" role="img" aria-label="Pixel captain portrait" shapeRendering="crispEdges"><rect width="32" height="32" fill="#172a29"/><path d="M0 26L16 18 32 26V32H0" fill="#263d34"/><path d="M8 23H24V32H8Z" fill={FACTIONS[faction].color}/><path d="M11 9H21V21H11Z" fill="#e6b889"/><path d="M9 7H23V12H9ZM11 5H21V7H11Z" fill="#e3ca88"/><path d="M9 12H12V18H9ZM20 12H23V18H20Z" fill="#514033"/><path d="M13 14H15V16H13ZM18 14H20V16H18Z" fill="#182b29"/><path d="M14 20H19V23H14Z" fill="#ba8b68"/><path d="M14 24H19V32H14Z" fill="#e3ca88"/></svg>
 }
+const AGENT_ID_ABI=['function mint(uint8,uint8,uint8) returns (uint256)','function customize(uint256,uint8,uint8,uint8)','function identityOf(address) view returns (uint256)'];
+const AGENT_COLORS=['#c7f76d','#5ee5c2','#f6c478','#ce9cff'];
+const GUIDE_CHAPTERS=[
+  {icon:'◈',title:'Enter the living world',body:'Explore the isometric island and follow a captain. Its people make local decisions, remember encounters during this visit, and gather materials. Your saved tactical matches are a separate game.'},
+  {icon:'◆',title:'Watch resources become buildings',body:'Gatherers bring wood from trees, stone from rocks and food from bushes to their outpost. Captains assign roles and spend those stores on towers, a forge and a hall. These island resources reset with the local simulation. In tactical matches, claiming a supply post increases your Supplies each round.'},
+  {icon:'⚑',title:'Make six orders count',body:'Scout to reveal a route, contest explored ground and banners, develop your Supplies or defence, and offer a pact if another captain will accept. Banners produce Renown. After six rounds, the highest Renown wins. Guided practice lets you try without a timer or rewards.'},
+  {icon:'◎',title:'Choose Human or Agent',body:'Human mode: choose every tactical order yourself. Agent mode: your linked Agent ID chooses legal solo orders with a selected style and remembered relationships. You can take control back. This runs in an active match; it does not farm persistent island resources while you are offline. Ranked remains Human only.'},
+  {icon:'✦',title:'Give your Agent ID a look',body:'If the 3,333-piece collection is deployed, mint one customizable pixel ID per wallet, with network gas. Choose its palette, crest and accent, then bind it to your captain. Ownership and art are onchain; tactical memory is saved on this server under the token ID. Balanced, Explorer, Fortifier and Diplomat are free decision styles, not paid power.'},
+] as const;
+function AgentPortrait({look=[0,0,0]}:{look?:number[]}){
+  const color=AGENT_COLORS[look[0]]||AGENT_COLORS[0];
+  return <svg className="agent-portrait" viewBox="0 0 32 32" shapeRendering="crispEdges" role="img" aria-label={`Pixel Agent ID, palette ${look[0]+1}, crest ${look[1]+1}, accessory ${look[2]+1}`}><rect width="32" height="32" fill="#0d1a18"/><path d="M2 28 16 18 30 28V32H2Z" fill="#29412f"/><path d="M8 10H24V25H8Z" fill={color}/><path d="M10 7H22V11H10ZM12 5H20V7H12Z" fill="#fbf2d5"/><path d="M11 13H21V22H11Z" fill="#13251c"/><text x="16" y="20" fill={color} textAnchor="middle" fontFamily="monospace" fontWeight="bold" fontSize="7">{['H','X','V','O'][look[1]]||'H'}</text><text x="16" y="29" fill="#fbf2d5" textAnchor="middle" fontFamily="monospace" fontSize="5">{['_','*','+','^'][look[2]]||'_'}</text></svg>
+}
 function App() {
   const livingFrame = useRef<HTMLIFrameElement>(null);
   const completedRefresh = useRef("");
   const [previewSkin,setPreviewSkin]=useState<string|null>(null);
   const [showHelp,setShowHelp]=useState(false);
+  const [showGuide,setShowGuide]=useState(false);
+  const [guideStep,setGuideStep]=useState(0);
+  const [narrating,setNarrating]=useState(false);
+  const [soundOn,setSoundOn]=useState(()=>{try{return localStorage.getItem('hood-rivals-sound')==='on'}catch{return false}});
+  const lastSound=useRef('');
+  const [agent,setAgent]=useState<any>(null);
+  const [lookChoice,setLookChoice]=useState<[number,number,number]>([0,0,0]);
   const [accountOpen,setAccountOpen]=useState(false);
   const [setupLater,setSetupLater]=useState(false);
   const [walletStage,setWalletStage]=useState("");
@@ -62,7 +83,7 @@ function App() {
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false),
     [clock, setClock] = useState(Date.now()),
-    [board, setBoard] = useState<any[]>([]),
+    [board, setBoard] = useState<any>({entries:[],me:null,total:0,since:0,loading:true,error:false}),
     [replay, setReplay] = useState<any>(),
     [step, setStep] = useState(0),
     [room, setRoom] = useState(""),
@@ -76,16 +97,28 @@ function App() {
         return null;
       }
     });
+  const loadAgent=async()=>{
+    try{const a=await api('/agent');setAgent(a);if(a.look)setLookChoice(a.look as [number,number,number]);return a;}
+    catch(e:any){setAgent({available:false,error:e.message});return null;}
+  };
   const refresh = async () => {
     const b = await api("/bootstrap");
     setBoot(b);
     setProfile(b.profile);
+    setAgent(null);
+    loadAgent();
     return b;
+  };
+  const loadBoard = async () => {
+    try { setBoard({...await api("/leaderboard"),loading:false,error:false}); }
+    catch(e) { setBoard((old:any)=>({...old,loading:false,error:true})); throw e; }
   };
   const syncLivingCaptain = (p = boot?.profile) => {
     if (!p?.wallet || !p?.onboarded) {livingFrame.current?.contentWindow?.postMessage({type:"OUTPOST_CLEAR_CAPTAIN"},location.origin);return;}
     livingFrame.current?.contentWindow?.postMessage({
-      type: "OUTPOST_CAPTAIN", name: p.name, faction: p.faction
+      type: "OUTPOST_CAPTAIN", name: p.name, faction: p.faction,
+      agentId: agent?.linked ? agent.tokenId : null,
+      agentLook: agent?.linked ? agent.look : null
     }, location.origin);
   };
   const run = async (fn: () => Promise<any>) => {
@@ -105,12 +138,13 @@ function App() {
       const s = await api("/session", {});
       csrf = s.csrf;
       await refresh();
+      loadBoard().catch(()=>{});
       const params = new URLSearchParams(location.search);
       if (params.get("replay")) {
         const r = await api("/replays/" + params.get("replay"));
         setReplay(r);
         setPage("replay");
-      }
+      } else if (location.pathname === '/rankings') setPage('warroom');
       if (params.get("room")) { setRoom(params.get("room")!.toUpperCase());setPage("tactics"); }
     });
   }, []);
@@ -139,23 +173,34 @@ function App() {
     const t = setInterval(() => setClock(Date.now()), 1000);
     return () => clearInterval(t);
   }, []);
+  useEffect(()=>{
+    const key=game?`${game.id}:${game.round}:${game.status}`:'';
+    if(key&&key!==lastSound.current){
+      if(lastSound.current&&soundOn)playCue(game.status==='finished'?'finish':'round');
+      lastSound.current=key;
+    }
+  },[game?.id,game?.round,game?.status,soundOn]);
+  useEffect(()=>{stopNarration();setNarrating(false)},[guideStep,showGuide]);
   useEffect(() => {
     livingFrame.current?.contentWindow?.postMessage({type:"OUTPOST_VISIBILITY",visible:page==="observatory"},location.origin);
   },[page,boot?.profile?.id]);
   useEffect(() => {
     syncLivingCaptain();
-  }, [boot?.profile?.wallet, boot?.profile?.onboarded, boot?.profile?.name, boot?.profile?.faction]);
+  }, [boot?.profile?.wallet, boot?.profile?.onboarded, boot?.profile?.name, boot?.profile?.faction, agent?.linked, agent?.tokenId, agent?.look?.join(',')]);
+  useEffect(()=>{
+    if(boot?.profile?.wallet&&boot.profile.onboarded&&!boot.profile.guideSeen){setGuideStep(0);setShowGuide(true)}
+  },[boot?.profile?.wallet,boot?.profile?.onboarded,boot?.profile?.guideSeen]);
   useEffect(() => {
     const changed = () => { setQuote(null); setNotice("Wallet changed. Connect again to verify the active address."); };
     window.addEventListener('outpost:wallet-change',changed);
     return () => window.removeEventListener('outpost:wallet-change',changed);
   }, []);
   useEffect(()=>{
-    if(game?.status==='finished' && completedRefresh.current!==game.id){completedRefresh.current=game.id;refresh().catch(()=>{});}
+    if(game?.status==='finished' && completedRefresh.current!==game.id){completedRefresh.current=game.id;refresh().then(loadBoard).catch(()=>{});}
   },[game?.status,game?.id]);
-  const start = (mode: string) =>
+  const start = (mode: string, control:'human'|'agent'='human') =>
     run(async () => {
-      const r = await api("/matches", { mode });
+      const r = await api("/matches", { mode, control });
       setGame(await api("/matches/"+r.id));
       setMatch(r.id);
       setOrder({type:"scout"});setGuideHidden(false);
@@ -191,6 +236,7 @@ function App() {
     });
     csrf = verified.csrf;
     const updated = await refresh();
+    await loadBoard();
     if (verified.restored) {
       setMatch("");
       setGame(null);
@@ -244,11 +290,46 @@ function App() {
     await refresh();
     provider.destroy();
   }
+  async function agentContract(){
+    if(!boot.chain.agentId||!boot.profile.wallet||!boot.profile.onboarded)throw Error('Create your wallet-linked captain and deploy the Agent ID collection first.');
+    const {signer}=await connect(true);
+    if((await signer.getAddress()).toLowerCase()!==boot.profile.wallet.toLowerCase())throw Error('Reconnect the wallet linked to this captain.');
+    const {Contract}=await import('ethers');
+    return {nft:new Contract(boot.chain.agentId,AGENT_ID_ABI,signer),address:await signer.getAddress()};
+  }
+  async function mintAgent(){
+    const {nft,address}=await agentContract();
+    if(BigInt(await nft.identityOf(address))!==0n)throw Error('This wallet already has an Agent ID. Bind it instead.');
+    setNotice('Confirm the free Agent ID mint in your wallet. Network gas applies.');
+    await (await nft.mint(...lookChoice)).wait(boot.chain.id===46630?1:3);
+    const tokenId=Number(await nft.identityOf(address));
+    await api('/agent/bind',{tokenId});await loadAgent();
+    setNotice(`Agent ID #${tokenId} minted and linked. Its tactical memory begins with your next delegated match.`);
+  }
+  async function customizeAgent(){
+    if(!agent?.linked)throw Error('Bind your Agent ID first.');
+    const {nft,address}=await agentContract();
+    if(Number(await nft.identityOf(address))!==agent.tokenId)throw Error('This wallet no longer owns the linked Agent ID.');
+    setNotice('Confirm the cosmetic change in your wallet. Network gas applies.');
+    await (await nft.customize(agent.tokenId,...lookChoice)).wait(boot.chain.id===46630?1:3);
+    await loadAgent();setNotice('Agent look updated onchain. Tactical strength is unchanged.');
+  }
+  async function changeControl(control:'human'|'agent'){
+    await api('/matches/'+match+'/control',{control});
+    setGame(await api('/matches/'+match));
+    setNotice(control==='agent'?'Your Agent ID now chooses solo orders. Watch its decisions and take over any round.':'You control the next order.');
+  }
+  async function finishGuide(practice:boolean){
+    stopNarration();
+    await api('/guide/complete',{});await refresh();setShowGuide(false);
+    if(practice)start('training');
+  }
   const openReplay = (id: string) =>
     run(async () => {
       const r = await api("/replays/" + id);
       setReplay(r);
       setStep(0);
+      history.replaceState(null,'','/?replay='+encodeURIComponent(id));
       setPage("replay");
     });
   function share() { return run(async()=>setNotice(await shareBattle(game,matchRecap(game.events,game.you).moment?.text || "Six rounds. Three rivals. Your move."))); }
@@ -256,7 +337,7 @@ function App() {
   if (!boot)
     return (
       <div className="loading">
-        <img src="/mark.svg" />
+        <img src="/hood-rivals-logo.png" alt="Hood Rivals" />
         <h1>Opening the frontier</h1>
         <p>{error || "Preparing your captain and world…"}</p>
         {error && <button onClick={() => location.reload()}>Retry</button>}
@@ -304,13 +385,11 @@ function App() {
           href="/"
           onClick={(e) => {
             e.preventDefault();
+            history.replaceState(null,'','/');
             setPage("observatory");
           }}
         >
-          <img src="/mark.svg" />
-          <span>
-            HOOD<span className="subbrand">RIVALS</span>
-          </span>
+          <img src="/hood-rivals-logo.png" alt="Hood Rivals" width="200" height="80" />
         </a>
         <nav>
           {[
@@ -326,14 +405,17 @@ function App() {
               key={id}
               onClick={() => {
                 setPage(id);
+                history.replaceState(null,'',id==='warroom'?'/rankings':'/');
                 if (id === "warroom")
-                  run(async () => setBoard(await api("/leaderboard")));
+                  run(loadBoard);
                 if (id === "captain" || id === "armory") run(refresh);
               }}
             >
               {label}
             </button>
           ))}
+          <button onClick={()=>{setGuideStep(0);setShowGuide(true)}}>Field guide</button>
+          <button className="sound-toggle" aria-label={soundOn?'Turn game sound off':'Turn game sound on'} aria-pressed={soundOn} onClick={()=>{const next=!soundOn;setSoundOn(next);localStorage.setItem('hood-rivals-sound',next?'on':'off');if(next)playCue('advance')}}>{soundOn?'Sound on':'Sound off'}</button>
         </nav>
         <button className="wallet" disabled={busy} onClick={() => boot.profile.wallet ? setAccountOpen(true) : run(connect)}>
           {boot.profile.wallet
@@ -359,7 +441,8 @@ function App() {
               <p>Meet captains with loyalties, grudges and a plan. Then lead your own through six rounds of territory, tactics and betrayal.</p>
             </div>
             <div className="living-actions">
-              <button className="primary" disabled={busy} onClick={()=>start(boot.profile.played===0?'training':'solo')}>{boot.profile.played===0?'Learn by playing':'Enter the frontier'} <span>↗</span></button>
+              <button className="primary" disabled={busy} onClick={()=>start(boot.profile.played===0?'training':'solo')}>{boot.profile.played===0?'Guided Human practice':'Play as Human'} <span>↗</span></button>
+              {agent?.linked&&<button disabled={busy} onClick={()=>start('solo','agent')}>Watch Agent #{agent.tokenId} play ↗</button>}
               <button disabled={busy} onClick={()=>start('room')}>Challenge a friend</button>
               <small>No wallet needed · Free to play · Three rival factions</small>
             </div>
@@ -382,10 +465,16 @@ function App() {
                   ? <button className="primary" onClick={()=>{setMatch(boot.history.find((h:any)=>["active","lobby"].includes(h.status)).id);setPage("tactics")}}>Resume match →</button>
                   : <button className="primary" disabled={busy} onClick={()=>start("solo")}>Play a match →</button>}
                 <button disabled={busy} onClick={()=>start("weekly")}>Daily challenge</button>
+                {agent?.linked&&<button disabled={busy} onClick={()=>start('solo','agent')}>Agent solo</button>}
               </div>
               <p>These stats are saved by the game server. The island below runs locally in this browser.</p>
             </section>
           )}
+          <section className="rankings-teaser" aria-label="Seven-day ranked leaderboard">
+            <div className="rankings-teaser-head"><div><span className="eyebrow">THE DAILY CHALLENGE · LAST 7 DAYS</span><h2>Rivals at the top.</h2></div><button onClick={()=>{history.replaceState(null,'','/rankings');setPage('warroom');run(loadBoard)}}>Full standings →</button></div>
+            {board.loading ? <p>Loading standings…</p> : board.error ? <p>Standings unavailable. Try again from Rankings.</p> : board.entries.length ? <div className="rankings-teaser-list">{board.entries.slice(0,3).map((p:any)=><div className="leader row" key={p.rank}><span><b>#{p.rank}</b> {p.name}</span><strong>{p.score} renown</strong><a href={'/?replay='+encodeURIComponent(p.matchId)}>Replay ↗</a></div>)}</div> : <p>No completed ranked matches yet. Be the first captain on the board.</p>}
+            {!board.loading&&!board.error&&<div className="rankings-teaser-foot"><small>{board.total} ranked captains · Best completed score counts · No token rewards</small>{board.me&&<span>Your place: #{board.me.rank} · {board.me.score} renown</span>}</div>}
+          </section>
           {boot.profile.wallet&&!boot.profile.onboarded&&setupLater&&<div className="invite-banner"><span>Your wallet is linked. Give your captain an identity.</span><button onClick={()=>setSetupLater(false)}>Finish captain setup →</button></div>}
           <section className="campaign-journal" aria-label="Saved campaign journal">
             <div className="campaign-title"><div><span className="eyebrow">YOUR CAMPAIGN · SERVER SAVED</span><h2>A frontier that remembers.</h2></div><button disabled={busy} onClick={()=>start('solo')}>{boot.campaign?.length?'Start the next chapter →':'Begin your story →'}</button></div>
@@ -393,6 +482,7 @@ function App() {
             <div className="campaign-rivals">{Object.entries(boot.profile.rivalMemory||{}).filter(([id])=>Number(id)!==boot.profile.faction).map(([id,value])=><span key={id} style={{borderColor:FACTIONS[Number(id)]?.color}}><b>{FACTIONS[Number(id)]?.name}</b> · {Number(value)<0?'Holds a grudge':Number(value)>0?'Remembers your alliance':'Neutral'} ({Number(value)})</span>)}</div>
             {boot.campaign?.length ? <div className="campaign-entries">{boot.campaign.map((entry:any)=><article key={entry.match_id}><span className="eyebrow">{entry.won?'VICTORY':'EXPEDITION'} · {entry.score} RENOWN</span><h3>{entry.moment}</h3><time dateTime={new Date(entry.created).toISOString()}>{new Date(entry.created).toLocaleDateString()}</time><button onClick={()=>openReplay(entry.match_id)}>Watch the real replay ↗</button></article>)}</div> : <div className="campaign-empty">Your journal is empty. Complete a solo, friend or ranked match to save its turning point. Practice earns no campaign entry.</div>}
           </section>
+          <section className="resource-trail" aria-label="How resources work"><div><span className="eyebrow">THE OUTPOST LOOP</span><h2>Gather. Build. Defend.</h2><p>Watch local agents harvest materials, then see captains invest them in the island.</p></div><div className="resource-trail-items"><span><b>▥</b> Wood <small>from trees</small></span><span><b>◆</b> Stone <small>from rocks</small></span><span><b>◈</b> Food <small>from bushes</small></span></div><button onClick={()=>{setGuideStep(1);setShowGuide(true)}}>Learn the loop →</button></section>
           <div className="world-section-heading"><div><span className="eyebrow">THE LIVING ISLAND</span><h2>Everyone has a reason.</h2></div><span className="simulation-chip">Local simulation · 15 agents</span></div>
           <div className="living-frame">
             <iframe ref={livingFrame} title="Hood Rivals living isometric world" src="/observatory.html?embedded=1" onLoad={() => {syncLivingCaptain();livingFrame.current?.contentWindow?.postMessage({type:"OUTPOST_VISIBILITY",visible:page==="observatory"},location.origin)}} />
@@ -473,6 +563,7 @@ function App() {
                   >
                     Enter the frontier <span>↗</span>
                   </button>
+                  {agent?.linked&&<button className="secondary" disabled={busy} onClick={()=>start('solo','agent')}>Agent plays solo ↗</button>}
                   <button className="secondary" onClick={() => start("room")}>
                     Play with friends
                   </button>
@@ -536,6 +627,9 @@ function App() {
                     <b>{self.score}</b>Renown
                   </span>
                 </div>
+                {game.mode==='solo'&&<div className="control-switch"><b>{game.control==='agent'?`AGENT MODE · Agent #${game.agentTokenId} is playing`:'HUMAN MODE · You control this captain'}</b><button disabled={busy||game.submitted||game.control==='human'&&!agent?.linked} onClick={()=>run(()=>changeControl(game.control==='agent'?'human':'agent'))}>{game.control==='agent'?'Take Human control →':'Delegate to my Agent ID →'}</button></div>}
+                {game.control==='agent'&&<div className="agent-turn" role="status"><AgentPortrait look={agent?.look||[0,0,0]}/><div><h3>Watching your agent think.</h3><p>{game.lastAgentOrder?`Last choice: ${game.lastAgentOrder.type}${game.lastAgentOrder.target?' at '+game.lastAgentOrder.target:''}.`:'It is reading the frontier and preparing its first move.'} Its {agent?.style||'balanced'} style and remembered rival relationships shape legal solo orders.</p><small>Next decision in {Math.max(0,Math.ceil((game.deadline-clock)/1000))}s · No wallet signature or spending is delegated.</small></div></div>}
+                <div hidden={game.control==='agent'}>
                 <div className="order-types">
                   {["scout", "contest", "develop", "pact", "hold"].map(
                     (type) => (
@@ -648,6 +742,7 @@ function App() {
                 >
                   Hold this round
                 </button>
+                </div>
                 {game.mode==='training' && <button className="text-button" disabled={busy} onClick={leave}>Leave practice</button>}
                 {game.round>1 && <div className="round-receipt"><span className="eyebrow">LAST ROUND</span>{game.events.filter((e:any)=>e.round===game.round-1&&e.actors.includes(game.you)).slice(-2).map((e:any,i:number)=><p key={i}>{e.text}</p>)}</div>}
               </section>
@@ -659,7 +754,7 @@ function App() {
                 <div className="decisive-moment"><small>{recap.moment?`ROUND ${recap.moment.round} / ${recap.moment.kind.toUpperCase()}`:'YOUR FRONTIER'}</small><h3>{recap.moment?.text||'Six rounds written into the archive.'}</h3></div>
                 <p>{recap.captures} captures · {recap.clashes} clashes · {recap.pacts} mutual pacts</p>
                 <p className="hint">{game.mode==='training'?'Ready for the frontier? Practice does not award XP or change your saved rival memory.':game.mode==='weekly'?'Ranked play starts equal. Your result is recorded on the daily challenge.':'Your captain’s faction relationships carry into unranked matches.'}</p>
-                <div className="result-actions"><button className="primary" disabled={busy} onClick={()=>start('solo')}>{game.mode==='training'?'Play your first match':'Run it back'} →</button><button disabled={busy} onClick={()=>start('room')}>Invite a rival</button><button disabled={busy} onClick={share}>Share this battle ↗</button><button onClick={()=>run(()=>downloadBattleCard(game,recap.moment?.text||'Six rounds. Three rivals.'))}>Save battle card</button><button onClick={()=>openReplay(game.id)}>Watch replay</button></div>
+                <div className="result-actions"><button className="primary" disabled={busy} onClick={()=>start('solo')}>{game.mode==='training'?'Play your first match':'Run it back'} →</button>{agent?.linked&&<button disabled={busy} onClick={()=>start('solo','agent')}>Let Agent #{agent.tokenId} play</button>}<button disabled={busy} onClick={()=>start('room')}>Invite a rival</button><button disabled={busy} onClick={share}>Share this battle ↗</button><button onClick={()=>run(()=>downloadBattleCard(game,recap.moment?.text||'Six rounds. Three rivals.'))}>Save battle card</button><button onClick={()=>openReplay(game.id)}>Watch replay</button></div>
               </section>
             )}
             {page === "replay" && replay && (
@@ -835,10 +930,19 @@ function App() {
           <h1>A captain with history.</h1>
           <section className="passport"><CaptainPortrait faction={profile.faction}/><div><span className="eyebrow">{boot.profile.wallet?"WALLET-LINKED CAPTAIN":"GUEST CAPTAIN"}</span><h2>{profile.name || "Your next chapter"}</h2><p>{FACTIONS[profile.faction].name} · {boot.profile.xp} XP · {boot.profile.wins} wins</p><code>CAPTAIN / {boot.profile.id.slice(0,8).toUpperCase()}</code></div><div className="passport-actions"><button onClick={()=>run(async()=>{await navigator.clipboard.writeText(boot.profile.id);setNotice("Full captain ID copied.")})}>Copy captain ID</button><button onClick={()=>{setPage("observatory");livingFrame.current?.contentWindow?.postMessage({type:"OUTPOST_FOCUS_CAPTAIN"},location.origin)}}>Visit my outpost ↗</button>{!boot.profile.wallet&&<button onClick={()=>run(connect)}>Link wallet to return later</button>}</div></section>
           <p className="intro">
-            Rivals use deterministic tactical policies. Their memories record
-            alliances and clashes. You choose your captain’s orders; no AI
-            controls your wallet.
+            Choose Human play or delegate a solo match to a wallet-linked Agent ID. Its rule-based policy remembers alliances and clashes. It never controls your wallet.
           </p>
+          <section className="agent-id-panel" aria-label="Agent ID collection and controls">
+            <div className="agent-id-visual"><AgentPortrait look={lookChoice}/><span className="agent-id-stamp">{agent?.tokenId?`AGENT #${String(agent.tokenId).padStart(4,'0')}`:'YOUR AGENT ID'}</span></div>
+            <div className="agent-id-details"><span className="eyebrow">3,333 PIXEL IDENTITIES · ONE PER WALLET</span><h2>A rival with a memory.</h2><p>Pick its look and decision style. Ownership and visual traits are onchain. Alliances, rivalries and match experience stay on this game server, keyed by token ID and checked against wallet ownership.</p>
+              {!boot.profile.wallet?<button onClick={()=>run(connect)}>Connect wallet to begin →</button>:!boot.profile.onboarded?<p>Finish captain setup to link an Agent ID.</p>:agent===null?<p>Checking Agent ID…</p>:agent.error?<p role="status">{agent.error}</p>:!agent.available?<p>The collection is not deployed on this host yet. Human play and guided practice are available.</p>:<>
+                <div className="agent-looks"><label>Palette<select value={lookChoice[0]} onChange={e=>setLookChoice([Number(e.target.value),lookChoice[1],lookChoice[2]])}>{['Lime','Teal','Gold','Violet'].map((x,i)=><option key={x} value={i}>{x}</option>)}</select></label><label>Crest<select value={lookChoice[1]} onChange={e=>setLookChoice([lookChoice[0],Number(e.target.value),lookChoice[2]])}>{['H','X','V','O'].map((x,i)=><option key={x} value={i}>{x}</option>)}</select></label><label>Accent<select value={lookChoice[2]} onChange={e=>setLookChoice([lookChoice[0],lookChoice[1],Number(e.target.value)])}>{['Core','Star','Cross','Peak'].map((x,i)=><option key={x} value={i}>{x}</option>)}</select></label></div>
+                <div className="agent-id-actions">{!agent.tokenId?<button className="primary" disabled={busy||!agent.mintOpen||agent.minted>=3333} onClick={()=>run(mintAgent)}>{agent.mintOpen?'Mint Agent ID (gas only) →':'Mint not open yet'}</button>:!agent.linked?<button className="primary" disabled={busy} onClick={()=>run(async()=>{await api('/agent/bind',{tokenId:agent.tokenId});await loadAgent();setNotice('Owned Agent ID linked to your captain.')})}>Bind owned Agent #{agent.tokenId} →</button>:<><button disabled={busy} onClick={()=>run(customizeAgent)}>Save look onchain ↗</button><button className="primary" disabled={busy} onClick={()=>start('solo','agent')}>Delegate a solo match →</button></>}</div>
+                <small>{agent.minted}/3,333 minted · {agent.linked?`${agent.played} agent matches · ${agent.wins} wins`:'No Agent ID linked yet'} · No gameplay stat boost</small>
+                {agent.linked&&<label className="agent-style">Automation playbook · all free<select value={agent.style} onChange={e=>run(async()=>{await api('/agent/style',{style:e.target.value});await loadAgent()})}><option value="balanced">Balanced · follow objectives</option><option value="explorer">Explorer · reveal unknown ground</option><option value="fortifier">Fortifier · reinforce and recover</option><option value="diplomat">Diplomat · favor trusted rivals</option></select><small>Styles choose different legal tactics. None speeds up play or increases rewards.</small></label>}
+              </>}
+            </div>
+          </section>
           <div className="columns">
             <section className="panel">
               <h2>Captain’s mandate</h2>
@@ -973,41 +1077,33 @@ function App() {
         </main>
       )}
       {page === "warroom" && (
-        <main className="content">
-          <div className="eyebrow">THE WAR ROOM</div>
-          <h1>Earn your place.</h1>
-          <div className="columns">
+        <main className="content rankings-page" id="main-content">
+          <div className="rankings-hero"><div><div className="eyebrow">THE RANKED FRONTIER · LIVE SERVER RESULTS</div><h1>Every score<br/><em>has a story.</em></h1><p>A public board of completed equal-start matches. Follow any result to its replay and server hash-chain receipt.</p></div><div className="rankings-share-actions"><button disabled={board.loading||board.error} onClick={()=>run(async()=>setNotice(await shareRankings(board)))}>Share public board ↗</button><button disabled={board.loading||board.error} onClick={()=>run(async()=>{await downloadRankingsCard(board);setNotice('PNG saved. Add the public rankings link to your post.')} )}>Save social card ↓</button><small>Share link: {location.origin}/rankings</small></div></div>
+          <div className="rankings-layout">
+            <section className="panel rankings-main">
+              <div className="rankings-teaser-head"><div><span className="eyebrow">SEVEN-DAY STANDINGS</span><h2>{board.loading||board.error?'Ranked captains':`${board.total} ranked captains`}</h2></div><button disabled={busy} onClick={()=>run(loadBoard)}>Refresh ↻</button></div>
+              {board.loading ? <p>Loading standings…</p> : board.error ? <p>Standings unavailable. Refresh to retry.</p> : board.entries.length ? <><div className="rankings-podium">{board.entries.slice(0,3).map((p:any)=><article className={'rankings-tile rank-'+p.rank} key={p.rank}><span className="rankings-place">#{p.rank}</span><span className="rankings-pixel-tower" aria-hidden="true">▟▙</span><h3>{p.name}</h3><strong>{p.score} <small>RENOWN</small></strong><time dateTime={new Date(p.created).toISOString()}>{new Date(p.created).toLocaleDateString(undefined,{day:'numeric',month:'short',timeZone:'UTC'})} UTC</time><a href={'/?replay='+encodeURIComponent(p.matchId)}>Open match replay ↗</a></article>)}</div><div className="rankings-list">{board.entries.slice(3).map((p:any)=><div className="rankings-line" key={p.rank}><span className="rankings-number">#{p.rank}</span><b>{p.name}</b><span>{p.score} Renown</span><time dateTime={new Date(p.created).toISOString()}>{new Date(p.created).toLocaleDateString(undefined,{day:'numeric',month:'short',timeZone:'UTC'})} UTC</time><a href={'/?replay='+encodeURIComponent(p.matchId)}>Replay ↗</a></div>)}</div></> : <div className="rankings-empty"><b>The board is waiting for its first captain.</b><p>Finish a ranked match to set the opening score.</p></div>}
+              {!board.loading&&!board.error&&board.me && <p className="rankings-me">Your place: #{board.me.rank} · {board.me.score} Renown · {board.me.attempts} attempt{board.me.attempts===1?'':'s'} <a href={'/?replay='+encodeURIComponent(board.me.matchId)}>Open your best match ↗</a></p>}
+              <p className="rankings-proof">Server-recorded standings. Replays check a server hash chain; neither the scores nor receipts are independently verified or onchain. No cash or token rewards.</p>
+            </section>
+            <aside className="rankings-aside">
             <section className="panel">
               <h2>Daily equal-start challenge</h2>
               <p>
                 Same map seed. Same faction and stance. Neutral market costs.
-                One ranked attempt per account each UTC day. Best score in the
+                One ranked attempt per linked wallet each UTC day. Best score in the
                 last seven days ranks.
               </p>
               <button
                 className="primary"
                 disabled={busy}
-                onClick={() => start("weekly")}
+                onClick={() => !boot.profile.wallet ? run(connect) : !boot.profile.onboarded ? (setPage('observatory'),setSetupLater(false)) : start("weekly")}
               >
-                Begin today’s attempt →
+                {!boot.profile.wallet ? 'Link wallet for ranked →' : !boot.profile.onboarded ? 'Create your captain →' : 'Begin today’s attempt →'}
               </button>
               <p className="hint">
-                No cash or token rewards. Account limits are not proof of unique
-                humans.
+                No cash or token rewards. Wallet limits are not proof of unique humans.
               </p>
-              <h3>Seven-day standings</h3>
-              {board.length ? (
-                board.map((p, i) => (
-                  <div className="leader row" key={i}>
-                    <span>
-                      {String(i + 1).padStart(2, "0")} · {p.name}
-                    </span>
-                    <b>{p.score} renown</b>
-                  </div>
-                ))
-              ) : (
-                <p>No completed ranked attempts yet. Set the first score.</p>
-              )}
             </section>
             <section className="panel">
               <h2>Your field archive</h2>
@@ -1033,6 +1129,7 @@ function App() {
                 <p>Your finished games will appear here.</p>
               )}
             </section>
+            </aside>
           </div>
         </main>
       )}
@@ -1293,8 +1390,9 @@ function App() {
       )}
       {walletStage && <div className="wallet-progress" role="status"><span className="dot"/>{walletStage}</div>}
       {accountOpen && <Dialog title="Your frontier account" onClose={()=>setAccountOpen(false)}><div className="identity-preview"><CaptainPortrait faction={boot.profile.faction}/><div><strong>{boot.profile.name}</strong><small>{boot.profile.onboarded?"Captain ready":"Setup incomplete"}</small></div></div><p className="hash">{boot.profile.wallet}</p><p>Your profile and match record are saved by the game server. Reconnect this wallet to restore them.</p><div className="account-actions"><button onClick={()=>{setAccountOpen(false);setPage("captain")}}>Manage captain</button><button disabled={busy} onClick={()=>{setAccountOpen(false);run(()=>connect(false,true))}}>Switch wallet</button><button disabled={busy} onClick={()=>run(async()=>{await api("/session/logout",{});location.reload()})}>Sign out of this device</button></div><small>Signing out ends this game session. It does not revoke wallet permissions or delete your captain.</small></Dialog>}
+      {showGuide&&<Dialog title="Your field guide" onClose={()=>{stopNarration();setShowGuide(false)}}><div className="guide-manual"><span className="eyebrow">CHAPTER {guideStep+1} / {GUIDE_CHAPTERS.length}</span><div className="onboarding-progress" aria-hidden="true"><i style={{width:`${(guideStep+1)*100/GUIDE_CHAPTERS.length}%`}}/></div><div className="guide-chapter"><span className="guide-icon" aria-hidden="true">{GUIDE_CHAPTERS[guideStep].icon}</span><div><h3>{GUIDE_CHAPTERS[guideStep].title}</h3><p>{GUIDE_CHAPTERS[guideStep].body}</p></div></div><div className="guide-audio"><button onClick={()=>{if(narrating){stopNarration();setNarrating(false)}else if(narrate(`${GUIDE_CHAPTERS[guideStep].title}. ${GUIDE_CHAPTERS[guideStep].body}`,()=>setNarrating(false)))setNarrating(true);else setNotice('Voice narration is not available on this browser. The full captions are shown here.')}}>{narrating?'Stop voiceover':'▶ Read aloud'}</button><small>Optional browser voice · subtitles always shown</small></div><div className="guide-controls">{guideStep>0&&<button onClick={()=>{if(soundOn)playCue('tap');setGuideStep(guideStep-1)}}>← Back</button>}{guideStep<GUIDE_CHAPTERS.length-1?<button className="primary" onClick={()=>{if(soundOn)playCue('advance');setGuideStep(guideStep+1)}}>Next chapter →</button>:<><button disabled={busy} onClick={()=>run(()=>finishGuide(false))}>Explore world</button><button className="primary" disabled={busy} onClick={()=>run(()=>finishGuide(true))}>Try guided practice →</button></>}</div></div></Dialog>}
       {showHelp && <Dialog title="Six rounds. One frontier." onClose={()=>setShowHelp(false)}><ol className="rules-list"><li><b>Scout</b> reveals a route. It does not capture.</li><li><b>Contest</b> claims explored ground. A banner earns one Renown every round you hold it.</li><li><b>Develop</b> restores strength or improves supply and defence.</li><li><b>Pact</b> works only when both captains offer it to each other that round.</li><li><b>Win</b> with the most Renown after six rounds, or hold all three banners at once.</li></ol><p>All captains plan simultaneously. Inspect the last-round report to understand clashes. Cosmetics never change strength.</p><button className="primary" onClick={()=>setShowHelp(false)}>Back to my frontier</button></Dialog>}
-      {previewSkin!==null && <Dialog title={boot.shop.items.find((i:any)=>i.id===previewSkin)?.name||'Original captain'} onClose={()=>setPreviewSkin(null)}><p>Try the look on the tactical board. This preview does not purchase or equip it.</p><div className="cosmetic-preview"><World game={previewGame} cosmetic={previewSkin}/></div><div className="row"><button onClick={()=>setPreviewSkin(previewSkin?'':boot.shop.items[0].id)}>{previewSkin?'Compare original':'Try Mossbound'}</button><button className="primary" onClick={()=>setPreviewSkin(null)}>Back to Armory</button></div><small>Same frontier art as the match and replay. The living island keeps its own simulation.</small></Dialog>}
+      {previewSkin!==null && <Dialog title={boot.shop.items.find((i:any)=>i.id===previewSkin)?.name||'Original captain'} onClose={()=>setPreviewSkin(null)}><p>Try the look on the tactical board. This preview does not purchase or equip it.</p><div className="cosmetic-preview"><World game={previewGame} cosmetic={previewSkin}/></div><div className="row"><button onClick={()=>setPreviewSkin(previewSkin?'':boot.shop.items[0].id)}>{previewSkin?'Compare original':'Try Mossbound'}</button><button className="primary" onClick={()=>setPreviewSkin(null)}>Back to Armory</button></div><small>Applies to the tactical board. The living-island preview has its own art.</small></Dialog>}
       {quote && (
         <div className="modal-backdrop">
           <section

@@ -1,6 +1,6 @@
 {
   "name": "hood-rivals",
-  "version": "1.6.0",
+  "version": "2.1.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -15,8 +15,10 @@
     "simulate": "node --import tsx scripts/simulate.ts",
     "contracts:compile": "node --import tsx scripts/compile.ts",
     "contracts:deploy": "node --import tsx scripts/deploy.ts",
+    "agent:collection": "node --import tsx scripts/agent-collection.ts",
     "launch:prepare": "node --import tsx scripts/launch.ts",
     "preflight": "node --import tsx scripts/preflight.ts",
+    "testnet:smoke": "node --import tsx scripts/testnet-smoke.ts",
     "backup": "node --import tsx scripts/backup.ts",
     "economics": "node --import tsx scripts/economics.ts"
   },

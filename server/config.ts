@@ -11,6 +11,7 @@ export const config = {
   store: process.env.STORE_ADDRESS || "",
   token: process.env.TOKEN_ADDRESS || "",
   stable: process.env.STABLE_ADDRESS || "",
+  agentId: process.env.AGENT_ID_ADDRESS || "",
   treasury: process.env.TREASURY_ADDRESS || "",
   signer: process.env.QUOTE_SIGNER_PRIVATE_KEY || "",
   marketMode: process.env.MARKET_MODE || "scenario",
