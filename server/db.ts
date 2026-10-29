@@ -22,6 +22,11 @@ export function database(path: string) {
  CREATE TABLE IF NOT EXISTS cache(key TEXT PRIMARY KEY,value TEXT);
  CREATE TABLE IF NOT EXISTS agent_links(user_id TEXT PRIMARY KEY REFERENCES users(id),token_id INTEGER UNIQUE NOT NULL);
  CREATE TABLE IF NOT EXISTS agent_memories(token_id INTEGER PRIMARY KEY,memory TEXT NOT NULL DEFAULT '{}',style TEXT NOT NULL DEFAULT 'balanced',played INTEGER NOT NULL DEFAULT 0,wins INTEGER NOT NULL DEFAULT 0);
+ CREATE TABLE IF NOT EXISTS outpost_stores(user_id TEXT PRIMARY KEY REFERENCES users(id),wood INTEGER NOT NULL DEFAULT 0,stone INTEGER NOT NULL DEFAULT 0,food INTEGER NOT NULL DEFAULT 1,beacon_level INTEGER NOT NULL DEFAULT 0);
+ CREATE TABLE IF NOT EXISTS outpost_missions(id TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id),token_id INTEGER,objective TEXT NOT NULL,approach TEXT NOT NULL,max_food INTEGER NOT NULL,spent_food INTEGER NOT NULL DEFAULT 0,status TEXT NOT NULL DEFAULT 'active',step INTEGER NOT NULL DEFAULT 0,next_at INTEGER NOT NULL,created INTEGER NOT NULL,finished INTEGER,bonus INTEGER NOT NULL DEFAULT 0,previous_threat TEXT NOT NULL DEFAULT '',gain_wood INTEGER NOT NULL DEFAULT 0,gain_stone INTEGER NOT NULL DEFAULT 0,gain_food INTEGER NOT NULL DEFAULT 0);
+ CREATE INDEX IF NOT EXISTS outpost_missions_user_time ON outpost_missions(user_id,created DESC);
+ CREATE INDEX IF NOT EXISTS outpost_missions_due ON outpost_missions(status,next_at);
+ CREATE TABLE IF NOT EXISTS outpost_mission_events(mission_id TEXT NOT NULL REFERENCES outpost_missions(id),seq INTEGER NOT NULL,at INTEGER NOT NULL,kind TEXT NOT NULL,detail TEXT NOT NULL,wood INTEGER NOT NULL DEFAULT 0,stone INTEGER NOT NULL DEFAULT 0,food INTEGER NOT NULL DEFAULT 0,previous TEXT NOT NULL,digest TEXT NOT NULL,PRIMARY KEY(mission_id,seq));
  `);
   const columns = db.prepare("PRAGMA table_info(users)").all() as {name:string}[];
   if(!columns.some(c=>c.name==="onboarded")){

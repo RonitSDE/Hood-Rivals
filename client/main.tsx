@@ -50,7 +50,7 @@ const GUIDE_CHAPTERS=[
   {icon:'◈',title:'Enter the living world',body:'Explore the isometric island and follow a captain. Its people make local decisions, remember encounters during this visit, and gather materials. Your saved tactical matches are a separate game.'},
   {icon:'◆',title:'Watch resources become buildings',body:'Gatherers bring wood from trees, stone from rocks and food from bushes to their outpost. Captains assign roles and spend those stores on towers, a forge and a hall. These island resources reset with the local simulation. In tactical matches, claiming a supply post increases your Supplies each round.'},
   {icon:'⚑',title:'Make six orders count',body:'Scout to reveal a route, contest explored ground and banners, develop your Supplies or defence, and offer a pact if another captain will accept. Banners produce Renown. After six rounds, the highest Renown wins. Guided practice lets you try without a timer or rewards.'},
-  {icon:'◎',title:'Choose Human or Agent',body:'Human mode: choose every tactical order yourself. Agent mode: your linked Agent ID chooses legal solo orders with a selected style and remembered relationships. You can take control back. This runs in an active match; it does not farm persistent island resources while you are offline. Ranked remains Human only.'},
+  {icon:'◎',title:'Choose Human or Agent',body:'Play a tactical match yourself or let a linked Agent ID choose legal solo orders. You can take control back. A wallet-linked captain can also send a runner on a server-saved one-minute Agent Mission: choose a resource, approach and food-spend limit, then return for its decision record. Missions are separate from ranked play.'},
   {icon:'✦',title:'Give your Agent ID a look',body:'If the 3,333-piece collection is deployed, mint one customizable pixel ID per wallet, with network gas. Choose its palette, crest and accent, then bind it to your captain. Ownership and art are onchain; tactical memory is saved on this server under the token ID. Balanced, Explorer, Fortifier and Diplomat are free decision styles, not paid power.'},
 ] as const;
 function AgentPortrait({look=[0,0,0]}:{look?:number[]}){
@@ -68,6 +68,11 @@ function App() {
   const [soundOn,setSoundOn]=useState(()=>{try{return localStorage.getItem('hood-rivals-sound')==='on'}catch{return false}});
   const lastSound=useRef('');
   const [agent,setAgent]=useState<any>(null);
+  const [missions,setMissions]=useState<any>(null);
+  const [missionObjective,setMissionObjective]=useState('forest');
+  const [missionApproach,setMissionApproach]=useState('careful');
+  const [missionFood,setMissionFood]=useState(0);
+  const [missionProof,setMissionProof]=useState<Record<string,any>>({});
   const [lookChoice,setLookChoice]=useState<[number,number,number]>([0,0,0]);
   const [accountOpen,setAccountOpen]=useState(false);
   const [setupLater,setSetupLater]=useState(false);
@@ -101,12 +106,14 @@ function App() {
     try{const a=await api('/agent');setAgent(a);if(a.look)setLookChoice(a.look as [number,number,number]);return a;}
     catch(e:any){setAgent({available:false,error:e.message});return null;}
   };
+  const loadMissions=async()=>{const result=await api('/missions');setMissions(result);return result};
   const refresh = async () => {
     const b = await api("/bootstrap");
     setBoot(b);
     setProfile(b.profile);
     setAgent(null);
     loadAgent();
+    loadMissions().catch(()=>setMissions(null));
     return b;
   };
   const loadBoard = async () => {
@@ -173,6 +180,11 @@ function App() {
     const t = setInterval(() => setClock(Date.now()), 1000);
     return () => clearInterval(t);
   }, []);
+  useEffect(()=>{
+    if(!missions?.activeId)return;
+    const t=setInterval(()=>loadMissions().catch(()=>{}),5000);
+    return ()=>clearInterval(t);
+  },[missions?.activeId]);
   useEffect(()=>{
     const key=game?`${game.id}:${game.round}:${game.status}`:'';
     if(key&&key!==lastSound.current){
@@ -394,6 +406,7 @@ function App() {
         <nav>
           {[
             ["observatory", "Living world"],
+            ["missions", "Agent missions"],
             ["tactics", "Play"],
             ["captain", "My captain"],
             ["warroom", "Rankings"],
@@ -409,6 +422,7 @@ function App() {
                 if (id === "warroom")
                   run(loadBoard);
                 if (id === "captain" || id === "armory") run(refresh);
+                if (id === "missions") loadMissions().catch(()=>{});
               }}
             >
               {label}
@@ -470,6 +484,10 @@ function App() {
               <p>These stats are saved by the game server. The island below runs locally in this browser.</p>
             </section>
           )}
+          <section className="mission-teaser" aria-label="Agent missions">
+            <div><span className="eyebrow">NEW · THE OUTPOST REMEMBERS</span><h2>Give your agent a mission.</h2><p>Set an objective and a spending limit. The runner acts on the server clock; return to see each choice and what came home.</p></div>
+            <div className="mission-teaser-action"><span>{missions?.activeId?'MISSION IN PROGRESS':missions?.available?`${missions.remaining} MISSIONS LEFT TODAY`:'LINK YOUR CAPTAIN'}</span><button className="primary" onClick={()=>setPage('missions')}>{missions?.activeId?'Follow the mission':'Open mission control'} →</button></div>
+          </section>
           <section className="rankings-teaser" aria-label="Seven-day ranked leaderboard">
             <div className="rankings-teaser-head"><div><span className="eyebrow">THE DAILY CHALLENGE · LAST 7 DAYS</span><h2>Rivals at the top.</h2></div><button onClick={()=>{history.replaceState(null,'','/rankings');setPage('warroom');run(loadBoard)}}>Full standings →</button></div>
             {board.loading ? <p>Loading standings…</p> : board.error ? <p>Standings unavailable. Try again from Rankings.</p> : board.entries.length ? <div className="rankings-teaser-list">{board.entries.slice(0,3).map((p:any)=><div className="leader row" key={p.rank}><span><b>#{p.rank}</b> {p.name}</span><strong>{p.score} renown</strong><a href={'/?replay='+encodeURIComponent(p.matchId)}>Replay ↗</a></div>)}</div> : <p>No completed ranked matches yet. Be the first captain on the board.</p>}
@@ -488,6 +506,31 @@ function App() {
             <iframe ref={livingFrame} title="Hood Rivals living isometric world" src="/observatory.html?embedded=1" onLoad={() => {syncLivingCaptain();livingFrame.current?.contentWindow?.postMessage({type:"OUTPOST_VISIBILITY",visible:page==="observatory"},location.origin)}} />
           </div>
           <p className="living-caption">Explore a local simulation: these 15 agents and their PX are not other online players or transferable rewards. Your captain identity and tactical match record are saved separately. The island stays with you between tabs and pauses while you are away. Refreshing the browser starts a new local world.</p>
+        </main>
+      )}
+      {page === 'missions' && (
+        <main id="main-content" className="content mission-page">
+          <div className="eyebrow">AGENT MISSIONS · SERVER SAVED</div><h1>Outpost orders.</h1>
+          <p className="intro">Give your runner a clear job. Every decision follows your limit, even after you close the browser. Return to build the beacon from what it brings home.</p>
+          {!missions?<div className="mission-empty" role="status">Loading the outpost record…</div>:!missions.available?<section className="mission-empty"><h2>Start with a captain.</h2><p>{missions.reason}</p><button className="primary" onClick={()=>boot.profile.wallet?setPage('captain'):run(connect)}>{boot.profile.wallet?'Create your captain':'Log in'} →</button></section>:<>
+            <section className="mission-resource-grid" aria-label="Saved outpost stores">
+              <div><b>▥ {missions.store.wood}</b><span>WOOD</span></div><div><b>◆ {missions.store.stone}</b><span>STONE</span></div><div><b>◈ {missions.store.food}</b><span>FOOD</span></div><div><b>✧ {missions.store.beacon_level}/3</b><span>BEACON</span></div>
+            </section>
+            <div className="mission-grid"><section className="mission-control"><span className="eyebrow">01 / SET THE MANDATE</span><h2>Where should the runner go?</h2>
+              <p>Three missions per UTC day, one at a time. Each takes about one minute. No wallet transaction, token reward or ranked advantage.</p>
+              <label>Objective<select value={missionObjective} onChange={e=>setMissionObjective(e.target.value)}><option value="forest">Greenwood · gather wood</option><option value="quarry">Stone ridge · gather stone</option><option value="lookout">Eastern lookout · gather food</option></select></label>
+              <label>Approach<select value={missionApproach} onChange={e=>setMissionApproach(e.target.value)}><option value="careful">Careful · avoid patrols</option><option value="bold">Bold · try a risky shortcut</option></select></label>
+              <label>Maximum food spend<select value={missionFood} onChange={e=>setMissionFood(Number(e.target.value))}><option value={0}>0 food · no spending authorized</option><option value={1}>1 food · spend only if a rival appears</option></select></label>
+              <p className="mission-limit">If a bold route meets a patrol and the spend is forbidden or unavailable, the runner withdraws with no materials. A safe route always avoids contact.</p>
+              <button className="primary" disabled={busy||!!missions.activeId||missions.remaining===0||missions.store.food<missionFood} onClick={()=>run(async()=>{const result=await api('/missions',{objective:missionObjective,approach:missionApproach,maxFoodSpend:missionFood});setMissions(result.board);setNotice('Mission assigned. Return in about one minute for the report.');if(soundOn)playCue('advance')})}>{missions.activeId?'Runner is away':missions.remaining===0?'Daily limit reached':'Send runner →'}</button>
+              <small>{missions.remaining} of 3 assignments left today · resets {new Date(missions.nextReset).toLocaleTimeString([], {hour:'numeric',minute:'2-digit'})} local time · {agent?.linked?`Agent ID #${agent.tokenId} verified at assignment`:'Free outpost runner; Agent ID optional'}</small>
+            </section>
+            <section className="mission-project"><span className="eyebrow">02 / BUILD A PLACE TO RETURN TO</span><h2>The signal beacon.</h2><div className={`beacon-art beacon-level-${missions.store.beacon_level}`} aria-hidden="true"><span>✦</span><i/><i/><i/></div><p>Permanent server-saved outpost project. Each level brightens the signal; it has no combat effect or token yield.</p><div className="mission-cost">Next level {missions.store.beacon_level<3?`${missions.projectCost.wood} wood + ${missions.projectCost.stone} stone`:'complete'}</div><button disabled={busy||missions.store.beacon_level>=3||missions.store.wood<missions.projectCost.wood||missions.store.stone<missions.projectCost.stone} onClick={()=>run(async()=>{setMissions(await api('/missions/beacon',{}));setNotice('Beacon upgraded. Your outpost record is saved.');if(soundOn)playCue('finish')})}>Build beacon →</button></section></div>
+            <section className="mission-ledger"><div className="mission-ledger-head"><div><span className="eyebrow">03 / THE RUNNER'S RECORD</span><h2>What happened out there.</h2></div><button onClick={()=>run(loadMissions)}>Refresh record ↻</button></div>
+              {missions.missions.length===0?<p className="mission-empty">No missions yet. Choose the greenwood, stone ridge or lookout to begin your first outpost story.</p>:missions.missions.map((m:any)=><article className="mission-report" key={m.id}><div className="mission-report-top"><div><span className="eyebrow">{m.status==='active'?'● RUNNER AWAY':'✓ RETURNED'} · {m.token_id?`AGENT #${m.token_id}`:'OUTPOST RUNNER'}</span><h3>{({forest:'The greenwood',quarry:'The stone ridge',lookout:'The eastern lookout'} as Record<string,string>)[m.objective]}</h3></div><div className="mission-report-meta">{m.status==='active'?`Next decision in ${Math.max(0,Math.ceil((m.next_at-clock)/1000))}s`:`+${m.gain_wood} wood · +${m.gain_stone} stone · +${m.gain_food} food`}</div></div><div className="mission-events">{m.events.length?m.events.map((event:any)=><div key={event.seq} className={`mission-event ${event.kind}`}><span>0{event.seq}</span><p>{event.detail}</p></div>):<p>The runner is preparing to set out. The first decision will appear soon.</p>}</div><footer><small>{new Date(m.created).toLocaleString()} · {m.approach} · max {m.max_food} food · spent {m.spent_food}</small><button onClick={()=>run(async()=>{const proof=await api(`/missions/${m.id}/proof`);setMissionProof(p=>({...p,[m.id]:proof}))})}>Check record integrity ↗</button></footer>{missionProof[m.id]&&<p className="mission-proof" role="status">{missionProof[m.id].intact?'✓ Saved event hash chain matches':'⚠ Saved event hash chain does not match'} · {missionProof[m.id].eventCount} events · {missionProof[m.id].scope}</p>}</article>)}
+            </section>
+            <p className="mission-boundary">Mission resources and the beacon are saved in this game server. The isometric island remains a separate local simulation. Mission receipts are server hash chains, not onchain proof; no independent fairness verification is claimed.</p>
+          </>}
         </main>
       )}
       {error && (

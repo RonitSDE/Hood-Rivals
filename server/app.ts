@@ -22,6 +22,7 @@ import {
 import { matchRecap } from "../shared/experience";
 import { agentOrder, type AgentStyle } from "../shared/agent";
 import { SHOP_ITEMS, ECONOMY } from "../shared/economy";
+import { advanceMissions, buildBeacon, launchMission, missionBoard, verifyMission } from './missions';
 const digest = (s: string) => createHash("sha256").update(s).digest("hex");
 const uid = () => randomBytes(24).toString("hex");
 const orderSchema = z
@@ -175,7 +176,7 @@ export function createApp(c: Config = config) {
         .all(u.id),
       market: await market(db, c),
       shop: { ...store.status(), items: SHOP_ITEMS, rivalEnabled: !!c.tokenUnitsPerDollar },
-      release: { version: "2.1.0", build: process.env.BUILD_SHA || "development" },
+      release: { version: "2.2.0", build: process.env.BUILD_SHA || "development" },
       economy: ECONOMY,
       chain: {
         id: c.chainId,
@@ -243,6 +244,41 @@ export function createApp(c: Config = config) {
     if(!owned.tokenId||linked?.token_id!==owned.tokenId)return res.status(403).json({error:'Bind your owned Agent ID first'});
     db.prepare('UPDATE agent_memories SET style=? WHERE token_id=?').run(style,owned.tokenId);
     res.json({style});
+  });
+  // The mission is server-owned and runs without browser or wallet access. A linked
+  // NFT is an identity label only; missions never delegate transactions or ranked power.
+  app.get('/api/missions',(req:any,res)=>{
+    const u=user(req);
+    if(!u.wallet||!u.onboarded)return res.json({available:false,reason:'Link a wallet and create your captain to save missions.'});
+    res.json({available:true,...missionBoard(db,u.id)});
+  });
+  app.post('/api/missions',async(req:any,res)=>{
+    const u=user(req);
+    if(!u.wallet||!u.onboarded)return res.status(403).json({error:'Create a wallet-linked captain to assign missions.'});
+    const b=z.object({objective:z.enum(['forest','quarry','lookout']),approach:z.enum(['careful','bold']),maxFoodSpend:z.number().int().min(0).max(1)}).strict().parse(req.body);
+    let tokenId:null|number=null;
+    if(c.agentId){
+      const linked=db.prepare('SELECT token_id FROM agent_links WHERE user_id=?').get(u.id) as any;
+      if(linked){
+        const owned=await ownedAgent(u);
+        if(owned.tokenId!==linked.token_id)return res.status(403).json({error:'Agent ID ownership changed. Rebind before assigning it.'});
+        tokenId=owned.tokenId;
+      }
+    }
+    const id=launchMission(db,u.id,b.objective,b.approach,b.maxFoodSpend,tokenId);
+    res.status(201).json({id,board:missionBoard(db,u.id)});
+  });
+  app.post('/api/missions/beacon',(req:any,res)=>{
+    const u=user(req);
+    if(!u.wallet||!u.onboarded)return res.status(403).json({error:'Create a wallet-linked captain first.'});
+    buildBeacon(db,u.id);
+    res.json(missionBoard(db,u.id));
+  });
+  app.get('/api/missions/:id/proof',(req:any,res)=>{
+    if(!/^[0-9a-f-]{36}$/i.test(req.params.id))return res.status(404).json({error:'Mission not found'});
+    const result=verifyMission(db,user(req).id,req.params.id);
+    if(!result)return res.status(404).json({error:'Mission not found'});
+    res.json(result);
   });
   app.patch("/api/profile", (req: any, res) => {
     const p = z
@@ -728,6 +764,7 @@ export function createApp(c: Config = config) {
       });
   });
   const interval = setInterval(() => {
+    try { advanceMissions(db); } catch(e) { console.error('Mission resolution failed',e); }
     for (const row of db
       .prepare("SELECT id FROM matches WHERE status='active' AND mode!='training' AND deadline<=?")
       .all(Date.now()) as any[]) {
