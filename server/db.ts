@@ -36,6 +36,16 @@ export function database(path: string) {
   }
   if(!columns.some(c=>c.name==="rival_memory")) db.exec("ALTER TABLE users ADD COLUMN rival_memory TEXT NOT NULL DEFAULT '{}'");
   if(!columns.some(c=>c.name==="guide_seen")) db.exec("ALTER TABLE users ADD COLUMN guide_seen INTEGER NOT NULL DEFAULT 0");
+  const storeColumns=db.prepare('PRAGMA table_info(outpost_stores)').all() as {name:string}[];
+  for(const name of ['ore','intel']) if(!storeColumns.some(c=>c.name===name))
+    db.exec(`ALTER TABLE outpost_stores ADD COLUMN ${name} INTEGER NOT NULL DEFAULT 0`);
+  const missionColumns=db.prepare('PRAGMA table_info(outpost_missions)').all() as {name:string}[];
+  for(const name of ['gain_ore','gain_intel']) if(!missionColumns.some(c=>c.name===name))
+    db.exec(`ALTER TABLE outpost_missions ADD COLUMN ${name} INTEGER NOT NULL DEFAULT 0`);
+  if(!missionColumns.some(c=>c.name==='role')) db.exec("ALTER TABLE outpost_missions ADD COLUMN role TEXT NOT NULL DEFAULT 'runner'");
+  const eventColumns=db.prepare('PRAGMA table_info(outpost_mission_events)').all() as {name:string}[];
+  for(const name of ['ore','intel']) if(!eventColumns.some(c=>c.name===name))
+    db.exec(`ALTER TABLE outpost_mission_events ADD COLUMN ${name} INTEGER NOT NULL DEFAULT 0`);
   const matchColumns=db.prepare('PRAGMA table_info(matches)').all() as {name:string}[];
   if(!matchColumns.some(c=>c.name==='control')) db.exec("ALTER TABLE matches ADD COLUMN control TEXT NOT NULL DEFAULT 'human'");
   if(!matchColumns.some(c=>c.name==='agent_token_id')) db.exec('ALTER TABLE matches ADD COLUMN agent_token_id INTEGER');

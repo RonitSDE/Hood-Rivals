@@ -176,7 +176,7 @@ export function createApp(c: Config = config) {
         .all(u.id),
       market: await market(db, c),
       shop: { ...store.status(), items: SHOP_ITEMS, rivalEnabled: !!c.tokenUnitsPerDollar },
-      release: { version: "2.2.0", build: process.env.BUILD_SHA || "development" },
+      release: { version: "2.4.0", build: process.env.BUILD_SHA || "development" },
       economy: ECONOMY,
       chain: {
         id: c.chainId,
@@ -255,7 +255,7 @@ export function createApp(c: Config = config) {
   app.post('/api/missions',async(req:any,res)=>{
     const u=user(req);
     if(!u.wallet||!u.onboarded)return res.status(403).json({error:'Create a wallet-linked captain to assign missions.'});
-    const b=z.object({objective:z.enum(['forest','quarry','lookout']),approach:z.enum(['careful','bold']),maxFoodSpend:z.number().int().min(0).max(1)}).strict().parse(req.body);
+    const b=z.object({objective:z.enum(['forest','quarry','lookout','mine','relay']),approach:z.enum(['careful','bold']),maxFoodSpend:z.number().int().min(0).max(1),role:z.enum(['quartermaster','engineer','scout','runner']).default('runner')}).strict().parse(req.body);
     let tokenId:null|number=null;
     if(c.agentId){
       const linked=db.prepare('SELECT token_id FROM agent_links WHERE user_id=?').get(u.id) as any;
@@ -265,7 +265,7 @@ export function createApp(c: Config = config) {
         tokenId=owned.tokenId;
       }
     }
-    const id=launchMission(db,u.id,b.objective,b.approach,b.maxFoodSpend,tokenId);
+    const id=launchMission(db,u.id,b.objective,b.approach,b.maxFoodSpend,tokenId,Date.now(),b.role);
     res.status(201).json({id,board:missionBoard(db,u.id)});
   });
   app.post('/api/missions/beacon',(req:any,res)=>{

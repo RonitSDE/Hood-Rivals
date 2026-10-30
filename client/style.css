@@ -1271,3 +1271,16 @@ p,.agent-id-details p,.guide-manual p,.experience-dialog p{color:#c7d5e7}
 [data-rk] button:hover:not(:disabled) {
   transform: none;
 }
+.mission-resource-grid{grid-template-columns:repeat(6,minmax(0,1fr))}
+.mission-passes{margin:28px 0;padding:24px;border:1px solid rgba(124,243,159,.34);border-radius:22px;background:linear-gradient(125deg,rgba(18,53,43,.94),rgba(13,29,58,.97));box-shadow:0 18px 50px rgba(0,0,0,.2)}
+.mission-passes h2{margin:8px 0;color:#f5fff7}
+.mission-passes p{color:#d1e8df;line-height:1.5}
+.mission-pass-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:18px}
+.mission-pass-grid article{padding:17px;border:1px solid rgba(141,239,184,.32);border-radius:15px;background:rgba(9,24,35,.78)}
+.mission-pass-grid strong{display:block;color:#a5ffbf;font-size:1.05rem}
+.mission-pass-grid span{display:block;margin:7px 0;font-size:.68rem;font-weight:800;letter-spacing:.12em;color:#58dff0}
+.mission-pass-grid p{margin:0;font-size:.88rem}
+.saved-outpost-bar{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin:12px 0;padding:12px 16px;border-radius:15px;border:1px solid rgba(145,241,178,.38);background:#112b29;color:#e8ffeb;font-size:.86rem}
+.saved-outpost-bar strong{color:#a6ffbb;letter-spacing:.1em;font-size:.75rem}
+.saved-outpost-bar button{margin-left:auto;background:#9ff46e;color:#10281f;border:0;border-radius:9px;padding:9px 13px;font-weight:800;cursor:pointer}
+@media(max-width:760px){.mission-pass-grid{grid-template-columns:1fr}.mission-passes{padding:18px}.mission-resource-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}

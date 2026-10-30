@@ -454,6 +454,20 @@ body{background:radial-gradient(ellipse 65% 65% at 45% -12%,#178eaf47,transparen
 .brand .brand-name span{color:#b5ff39}.brand small{color:#9cdad9}.signal-dot{background:#b5ff39;box-shadow:0 0 12px #b5ff39}
 .ctrls button.on{background:#215a69;border-color:#31dfd2;color:#efffff}
 .watch,.right .card,.feed,.embedded .watch,.embedded .right,.embedded .feed,.embedded .mini,.embedded .banner .bx{background:#10273bea;border-color:#437b93}
+/* Saved mission control is separate from the island's decorative autonomous stockpiles. */
+.saved-outpost{display:none;position:absolute;top:76px;left:14px;z-index:7;width:min(300px,calc(100% - 28px));border:1px solid #73bc84;border-radius:12px;background:#0b2633f5;color:#f2fff5;box-shadow:0 12px 35px #020b19b8;font-family:'DM Sans',system-ui,sans-serif}
+.embedded .saved-outpost{display:block}.embedded .stage.mobile-inspect .saved-outpost,.embedded .stage.mobile-teams .saved-outpost{display:none}
+.saved-outpost button{border:1px solid #6fbc83;border-radius:7px;background:#245643;color:#e9ffe9;padding:8px 10px;font-size:11px;font-weight:700;min-height:34px}
+.saved-outpost button:hover:not(:disabled){background:#327959}.saved-outpost button:disabled{opacity:.45;cursor:not-allowed}
+.saved-toggle{width:100%;display:flex;justify-content:space-between;gap:8px;align-items:center;text-align:left;background:#163d3f!important;border:0!important;padding:10px 12px!important}
+.saved-toggle b{color:#b5ff39;font-size:11px}.saved-toggle span{font-size:10px;color:#e6f7e4}
+.saved-body{padding:11px 12px 13px;display:grid;gap:10px;max-height:min(430px,65vh);overflow:auto}
+.saved-body[hidden]{display:none}.saved-body p{margin:0;color:#bbd8d4;font-size:11px;line-height:1.4}
+.saved-ledger{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}.saved-ledger span{border:1px solid #426a65;border-radius:6px;background:#153b45;padding:6px 2px;text-align:center;color:#cde9e5;font-size:9px}.saved-ledger b{display:block;color:#fff;font:700 14px 'Chakra Petch',sans-serif}
+.saved-routes{display:grid;grid-template-columns:repeat(2,1fr);gap:5px}.saved-routes button{white-space:normal;text-align:left}.saved-routes small{display:block;color:#a4d7bb;font-weight:400;margin-top:2px}
+.saved-build{display:grid;gap:5px;border-top:1px solid #426a65;padding-top:9px}.saved-build strong{color:#d9ff93}.saved-build button{background:#b5ff39;color:#13331c;border-color:#d3ff89}
+.saved-feedback{color:#ffe09c!important}.saved-note{font-size:10px!important;color:#a4c8c5!important}
+@media(max-width:900px){.embedded .saved-outpost{top:auto;bottom:114px;left:8px;width:min(245px,calc(100% - 125px))}.saved-body{max-height:45vh}.saved-ledger span{font-size:8px}.saved-ledger b{font-size:12px}}
 </style>
 </head>
 <body>
@@ -477,6 +491,10 @@ body{background:radial-gradient(ellipse 65% 65% at 45% -12%,#178eaf47,transparen
       <canvas id="world" tabindex="0" aria-label="Living island. Arrow keys to pan, plus and minus to zoom, brackets to select agents."></canvas>
       <div class="world-stamp"><span class="signal-dot"></span> The living frontier</div>
       <div class="banner" id="banner"></div>
+      <aside class="saved-outpost" id="savedOutpost" aria-label="Saved outpost mission control">
+        <button id="savedToggle" class="saved-toggle" aria-expanded="false"><b>✦ SAVED OUTPOST</b><span id="savedSummary">Loading…</span></button>
+        <div id="savedBody" class="saved-body" hidden></div>
+      </aside>
       <div class="mini card"><div class="lbl"><span>Map</span><span class="mono" id="miniLbl"></span></div><canvas id="mini"></canvas></div>
       <div class="island-compass" aria-label="Jump to outpost"><span>TRAVEL TO</span><button data-outpost="0">Emberhold</button><button data-outpost="1">Tidewatch</button><button data-outpost="2">Sunreach</button></div>
       <div class="hint">Drag to explore · pinch or scroll to zoom · select an agent</div>

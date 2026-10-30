@@ -43,6 +43,39 @@ test('offline mission resolves once, honors spend limit, persists a useful proje
   }finally{db.close()}
 });
 
+test('specialists earn five saved materials, gated routes and old receipts remain valid',()=>{
+  const db=database(':memory:');
+  try{
+    db.prepare('INSERT INTO users(id,name,wallet,onboarded) VALUES (?,?,?,1)').run('specialist','Jo','0x0000000000000000000000000000000000000002');
+    const t=Date.UTC(2026,9,29,11);
+    assert.throws(()=>launchMission(db,'specialist','mine','careful',0,null,t,'engineer'));
+    const legacy=launchMission(db,'specialist','forest','careful',0,null,t);
+    advanceMissions(db,t+MISSION_STEP_MS*3+1);
+    assert.equal(verifyMission(db,'specialist',legacy)?.intact,true);
+    db.prepare('UPDATE outpost_stores SET wood=4,stone=4 WHERE user_id=?').run('specialist');
+    buildBeacon(db,'specialist');
+    const ore=launchMission(db,'specialist','mine','careful',0,null,t+MISSION_STEP_MS*4,'engineer');
+    advanceMissions(db,t+MISSION_STEP_MS*7+1);
+    let board=missionBoard(db,'specialist',t+MISSION_STEP_MS*7+1);
+    assert.equal(board.store.ore,2);
+    assert.equal(verifyMission(db,'specialist',ore)?.intact,true);
+    const intel=launchMission(db,'specialist','relay','careful',0,null,t+MISSION_STEP_MS*8,'scout');
+    advanceMissions(db,t+MISSION_STEP_MS*11+1);
+    board=missionBoard(db,'specialist',t+MISSION_STEP_MS*11+1);
+    assert.equal(board.store.intel,2);
+    db.prepare('UPDATE outpost_stores SET wood=3,stone=3 WHERE user_id=?').run('specialist');
+    buildBeacon(db,'specialist');
+    board=missionBoard(db,'specialist',t+MISSION_STEP_MS*12);
+    assert.equal(board.store.beacon_level,2);
+    assert.equal(board.store.ore,1);
+    assert.equal(board.store.intel,1);
+    assert.throws(()=>launchMission(db,'specialist','mine','careful',0,null,t+MISSION_STEP_MS*13,'engineer'));
+    db.prepare('UPDATE outpost_mission_events SET ore=99 WHERE mission_id=? AND seq=3').run(ore);
+    assert.equal(verifyMission(db,'specialist',ore)?.intact,false);
+    assert.equal(verifyMission(db,'specialist',legacy)?.intact,true);
+  }finally{db.close()}
+});
+
 test('authenticated mission API separates guest, owner, daily cap and private proof',async()=>{
   const runtime=createApp({...config,db:':memory:',origin:'http://mission.test',production:false});
   const server=runtime.app.listen(0);

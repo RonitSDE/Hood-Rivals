@@ -53,7 +53,7 @@ let tiles,bridge,block,forest,wdepth,FN,FN2;
 let bases,agents,monsters,resources,statics,projs,floaters,graves,feed,smokes,sparkles;
 let rift,riftT,spawnT,time,day,season,daily,banner,headline,seasonEnd,uidN;
 let watched=null,follow=true,director=true,lastDirect=-99,speed=2,paused=false,tab='mind',feedOpen=false;
-let linkedCaptain=null,parentVisible=true;
+let linkedCaptain=null,parentVisible=true,savedMission=null,savedMissionPending=false,savedMissionFeedback='';
 const reducedMotion=matchMedia("(prefers-reduced-motion: reduce)").matches;
 const ZOOMS=[1,1.5,2,3,4];let zi=2;
 const cam={x:0,y:0};
@@ -861,6 +861,16 @@ let visT=0;
 const DPR=()=>Math.min(window.devicePixelRatio||1,2);
 function resize(){const r=cv.getBoundingClientRect(),d=DPR(),w=Math.max(1,Math.round(r.width*d)),h=Math.max(1,Math.round(r.height*d));if(cv.width!==w)cv.width=w;if(cv.height!==h)cv.height=h;const m=mini.getBoundingClientRect(),mw=Math.max(1,Math.round(m.width*d)),mh=Math.max(1,Math.round(m.height*d));if(mini.width!==mw)mini.width=mw;if(mini.height!==mh)mini.height=mh;if(terrainC)renderMini();}
 function view(){const d=DPR(),ds=ZOOMS[zi]*d;const ox=Math.round(cv.width/2-cam.x*ds),oy=Math.round(cv.height/2-cam.y*ds);return{d,ds,ox,oy,x0:-ox/ds,y0:-oy/ds,x1:(cv.width-ox)/ds,y1:(cv.height-oy)/ds}}
+function drawSavedBeacon(x,y,level){
+  const rise=level*5,top=Math.round(y-29-rise),left=Math.round(x+16);
+  ctx.fillStyle='#081d2c';ctx.fillRect(left-7,top+12,15,21+rise);
+  ctx.fillStyle='#5a8190';ctx.fillRect(left-5,top+13,11,17+rise);
+  ctx.fillStyle='#a8f46d';ctx.fillRect(left-3,top+16,7,2);ctx.fillRect(left-3,top+22,7,2);
+  ctx.fillStyle='#c2ff45';ctx.fillRect(left-4,top+6,9,9);ctx.fillStyle='#ebffbd';ctx.fillRect(left-2,top+8,5,5);
+  ctx.fillStyle='#76eebf';ctx.fillRect(left,top+1,1,4);ctx.fillRect(left-7,top+9,2,2);ctx.fillRect(left+6,top+9,2,2);
+  if(level>1){ctx.fillStyle='#b5ff39';ctx.fillRect(left-11,top+12,3,3);ctx.fillRect(left+9,top+12,3,3)}
+  if(level>2){ctx.fillStyle='#e4ff9b';ctx.fillRect(left-15,top+4,2,2);ctx.fillRect(left+13,top+4,2,2)}
+}
 function render(){
   const V=view();
   ctx.setTransform(1,0,0,1,0,0);ctx.imageSmoothingEnabled=false;ctx.fillStyle='#1e4a72';ctx.fillRect(0,0,cv.width,cv.height);
@@ -885,6 +895,10 @@ function render(){
     const cfx=isoX(b.cx+.5,b.cy+.5),cfy=isoY(b.cx+.5,b.cy+.5);
     if(inV(cfx,cfy,200)){
       list.push({k:b.cx+b.cy+1,f:()=>ctx.drawImage(SP.campfire[Math.floor(visT*7)%3],Math.round(cfx-8),Math.round(cfy-12))});
+      if(savedMission?.available&&linkedCaptain?.faction===b.i&&savedMission.store.beacon_level>0){
+        const level=savedMission.store.beacon_level;
+        list.push({k:b.cx+b.cy+1.1,f:()=>drawSavedBeacon(cfx,cfy,level)});
+      }
       const dx=isoX(b.depot[0],b.depot[1]),dy=isoY(b.depot[0],b.depot[1]);
       list.push({k:b.depot[0]+b.depot[1],f:()=>{const w=Math.min(5,Math.floor(b.res.wood/25)),s=Math.min(4,Math.floor(b.res.stone/30)),fo=Math.min(3,Math.floor(b.res.food/25));for(let i=0;i<w;i++)ctx.drawImage(SP.logs,Math.round(dx-12+(i%3)*2),Math.round(dy-4-Math.floor(i/3)*3)-(i%3));for(let i=0;i<s;i++)ctx.drawImage(SP.stone,Math.round(dx+1+(i%2)*4),Math.round(dy-3-Math.floor(i/2)*3));for(let i=0;i<fo;i++)ctx.drawImage(SP.food,Math.round(dx-4+i*3),Math.round(dy+2))}});
       if(b.project){const p=b.project;list.push({k:p.x+p.y+1,f:()=>{const sx=isoX(p.x,p.y),sy=isoY(p.x,p.y);if(p.k==='tower')ctx.drawImage(SP.scaffold,Math.round(sx-18),Math.round(sy-28));const bx=isoX(p.x+.5,p.y+.5)-10,by=isoY(p.x+.5,p.y+.5)-(p.k==='tower'?34:26);ctx.fillStyle='#1a1715';ctx.fillRect(bx,by,20,3);ctx.fillStyle='#74c96b';ctx.fillRect(bx+1,by+1,Math.round(18*p.prog/p.work),1)}})}
@@ -926,7 +940,7 @@ function render(){
   ctx.setTransform(V.d,0,0,V.d,0,0);
   const toS=(wx,wy)=>[(wx*V.ds+V.ox)/V.d,(wy*V.ds+V.oy)/V.d];
   const z=ZOOMS[zi];
-  for(const b of bases){const[sx,sy]=toS(isoX(b.cx+.5,b.cy+.5),isoY(b.cx+.5,b.cy+.5)-92);plate(sx,sy,b.name.toUpperCase(),`OUTPOST · ${b.captures}/3 FLAGS`,b.color)}
+  for(const b of bases){const[sx,sy]=toS(isoX(b.cx+.5,b.cy+.5),isoY(b.cx+.5,b.cy+.5)-92);plate(sx,sy,b.name.toUpperCase(),savedMission?.available&&linkedCaptain?.faction===b.i?`SAVED BEACON ${savedMission.store.beacon_level}/3 · LOCAL FLAGS ${b.captures}/3`:`LOCAL SIM · ${b.captures}/3 FLAGS`,b.color)}
   if(rift){const[sx,sy]=toS(isoX(rift.x,rift.y),isoY(rift.x,rift.y)-42);tag(sx,sy,'RIFT','#a093f4',true)}
   for(const a of agents){if(a.dead||a===watched)continue;const[sx,sy]=toS(isoX(a.x,a.y),isoY(a.x,a.y)-24);if(sx<-60||sy<-40||sx>cv.width/V.d+60||sy>cv.height/V.d+40)continue;
     if(z>=1.5||a.flag)tag(sx,sy,(a.captain?'★ ':'')+a.name,TEAMS[a.team].color,false,a.flag?'⚑':null);
@@ -1062,7 +1076,7 @@ function renderWatch(){
   $('watch').innerHTML=h;
 }
 function renderRight(){
-  let h=`<section class="card"><div class="lbl" style="margin-bottom:4px">Teams · first to 3 flags</div>`;
+  let h=`<section class="card"><div class="lbl" style="margin-bottom:4px">Local simulation · first to 3 flags</div><small class="muted">Stocks below are visual only. Saved materials are in Mission control.</small>`;
   for(const b of bases){const cap=agents.find(a=>a.team===b.i&&a.captain);const al=[...b.allies].map(i=>bases[i].name);
     h+=`<div class="team"><div class="tn"><i style="background:${b.color}"></i>${b.name}<span class="pips">${[0,1,2].map(i=>`<span style="${i<b.captures?`background:${b.color};border-color:${b.color}`:''}"></span>`).join('')}</span></div>
     <div class="plan">${esc(b.plan||'Settling in')}</div>
@@ -1090,6 +1104,34 @@ function renderTop(){
   $('miniLbl').textContent=`${agents.filter(a=>!a.dead).length} agents · ${monsters.length} monsters`;
 }
 function renderUI(force){renderTop();if(force||!$('watch').contains(document.activeElement))renderWatch();if(force||!$('right').contains(document.activeElement))renderRight();renderFeed()}
+
+function renderSavedOutpost(){
+  const head=$('savedSummary'),body=$('savedBody');
+  if(!savedMission){head.textContent='Connecting to your record';body.innerHTML='<p>Checking your saved outpost…</p>';return}
+  if(!savedMission.available){head.textContent='Connect to save';body.innerHTML=`<p>${esc(savedMission.reason||'Link a wallet and create your captain to save missions.')}</p><button data-saved-action="open">Open mission control →</button><p class="saved-note">The island agents and their stockpiles are a local visual simulation.</p>`;return}
+  const s=savedMission.store,c=savedMission.projectCost,active=savedMission.active;
+  head.textContent=`BEACON ${s.beacon_level}/3 · ${savedMission.remaining} orders left`;
+  const stock=[['▥','Wood','wood'],['◆','Stone','stone'],['◈','Food','food'],['⬡','Ore','ore'],['⌁','Intel','intel']];
+  const routes=[['forest','Wood','Quartermaster'],['quarry','Stone','Engineer'],['lookout','Food','Quartermaster'],['mine','Ore','Engineer'],['relay','Intel','Scout']];
+  const blocked=savedMissionPending||!!active||savedMission.remaining===0;
+  const seconds=active?Math.max(0,Math.ceil((active.next_at-Date.now())/1000)):0;
+  body.innerHTML=`<p class="saved-note">SERVER SAVED · Mission orders earn these materials. Ambient gathering does not.</p>
+    <div class="saved-ledger">${stock.map(([icon,name,key])=>`<span title="Saved ${name}">${icon}<b>${s[key]}</b>${name}</span>`).join('')}</div>
+    ${active?`<p role="status">${esc(active.role)} on the ${esc(active.objective)} route · next decision in <span id="savedCountdown">${seconds}</span>s</p>`:`<p>${savedMission.remaining} of 3 assignments available today · careful route, 0 food authorized</p>`}
+    <div class="saved-routes">${routes.map(([id,label,role])=>`<button data-saved-objective="${id}" ${blocked||(['mine','relay'].includes(id)&&s.beacon_level<1)?'disabled':''}>${label}<small>${role}${['mine','relay'].includes(id)&&s.beacon_level<1?' · beacon 1':''}</small></button>`).join('')}</div>
+    <div class="saved-build"><strong>✦ Signal beacon ${s.beacon_level}/3</strong><p>${s.beacon_level>=3?'Fully built':`Next level: ${c.wood} wood · ${c.stone} stone${c.ore?` · ${c.ore} ore · ${c.intel} intel`:''}`}</p><button data-saved-action="beacon" ${savedMissionPending||s.beacon_level>=3||s.wood<c.wood||s.stone<c.stone||s.ore<c.ore||s.intel<c.intel?'disabled':''}>${s.beacon_level>=3?'Beacon complete':'Build saved beacon →'}</button></div>
+    <button data-saved-action="open">Full mission report →</button>
+    ${savedMissionFeedback?`<p class="saved-feedback" role="status">${esc(savedMissionFeedback)}</p>`:''}`;
+}
+$('savedToggle').onclick=()=>{const body=$('savedBody');body.hidden=!body.hidden;$('savedToggle').setAttribute('aria-expanded',String(!body.hidden));if(!body.hidden)renderSavedOutpost()};
+setInterval(()=>{const node=$('savedCountdown'),active=savedMission?.active;if(node&&active)node.textContent=String(Math.max(0,Math.ceil((active.next_at-Date.now())/1000)))},1000);
+$('savedBody').addEventListener('click',e=>{
+  const button=e.target.closest('button');if(!button||button.disabled||!document.body.classList.contains('embedded'))return;
+  const objective=button.dataset.savedObjective,action=button.dataset.savedAction;
+  if(objective){if(savedMissionPending)return;savedMissionPending=true;savedMissionFeedback='Sending specialist…';renderSavedOutpost();window.parent.postMessage({type:'OUTPOST_WORLD_ACTION',action:'mission',objective},location.origin)}
+  else if(action==='beacon'){if(savedMissionPending)return;savedMissionPending=true;savedMissionFeedback='Building beacon…';renderSavedOutpost();window.parent.postMessage({type:'OUTPOST_WORLD_ACTION',action:'beacon'},location.origin)}
+  else if(action==='open')window.parent.postMessage({type:'OUTPOST_WORLD_ACTION',action:'open'},location.origin);
+});
 
 /* ================= input ================= */
 let drag=null;const pointers=new Map();let pinch=null;
@@ -1163,6 +1205,16 @@ function applyLinkedCaptain(){
 }
 window.addEventListener('message',e=>{
   if(e.origin!==location.origin||e.source!==window.parent)return;
+  if(e.data?.type==='OUTPOST_MISSIONS'){
+    const board=e.data.board;
+    if(!board||typeof board.available!=='boolean')return;
+    if(board.available){
+      if(!board.store||!board.projectCost||!['wood','stone','food','ore','intel','beacon_level'].every(k=>Number.isSafeInteger(board.store[k])&&board.store[k]>=0)||!['wood','stone','ore','intel'].every(k=>Number.isSafeInteger(board.projectCost[k])&&board.projectCost[k]>=0)||!Number.isSafeInteger(board.remaining)||board.remaining<0)return;
+      savedMission={available:true,store:board.store,projectCost:board.projectCost,remaining:board.remaining,active:board.active&&typeof board.active.objective==='string'?board.active:null};
+    }else savedMission={available:false,reason:typeof board.reason==='string'?board.reason:''};
+    renderSavedOutpost();return;
+  }
+  if(e.data?.type==='OUTPOST_MISSION_RESULT'){savedMissionPending=false;savedMissionFeedback=typeof e.data.message==='string'?e.data.message.slice(0,180):'';renderSavedOutpost();return}
   if(e.data?.type==='OUTPOST_CLEAR_CAPTAIN'){linkedCaptain=null;for(const a of agents||[])if(a.linkedOriginalName){a.name=a.linkedOriginalName;delete a.linkedOriginalName}return;}
   if(e.data?.type==='OUTPOST_VISIBILITY'){parentVisible=e.data.visible===true;return;}
   if(e.data?.type==='OUTPOST_FOCUS_CAPTAIN'){focusHome();return;}
