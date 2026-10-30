@@ -4,10 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Hood Rivals</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/fonts/fonts.css">
 <style>
 body{margin:0}
 
@@ -455,7 +452,7 @@ body{background:radial-gradient(ellipse 65% 65% at 45% -12%,#178eaf47,transparen
 .ctrls button.on{background:#215a69;border-color:#31dfd2;color:#efffff}
 .watch,.right .card,.feed,.embedded .watch,.embedded .right,.embedded .feed,.embedded .mini,.embedded .banner .bx{background:#10273bea;border-color:#437b93}
 /* Saved mission control is separate from the island's decorative autonomous stockpiles. */
-.saved-outpost{display:none;position:absolute;top:76px;left:14px;z-index:7;width:min(300px,calc(100% - 28px));border:1px solid #73bc84;border-radius:12px;background:#0b2633f5;color:#f2fff5;box-shadow:0 12px 35px #020b19b8;font-family:'DM Sans',system-ui,sans-serif}
+.saved-outpost{display:none;position:absolute;top:76px;left:14px;z-index:7;width:min(300px,calc(100% - 28px));border:1px solid #73bc84;border-radius:12px;background:#0b2633f5;color:#f2fff5;box-shadow:0 12px 35px #020b19b8;font-family:'Inter',system-ui,sans-serif}
 .embedded .saved-outpost{display:block}.embedded .stage.mobile-inspect .saved-outpost,.embedded .stage.mobile-teams .saved-outpost{display:none}
 .saved-outpost button{border:1px solid #6fbc83;border-radius:7px;background:#245643;color:#e9ffe9;padding:8px 10px;font-size:11px;font-weight:700;min-height:34px}
 .saved-outpost button:hover:not(:disabled){background:#327959}.saved-outpost button:disabled{opacity:.45;cursor:not-allowed}
@@ -473,7 +470,7 @@ body{background:radial-gradient(ellipse 65% 65% at 45% -12%,#178eaf47,transparen
 <body>
 <div class="app">
   <div class="top">
-    <div class="brand"><img class="crest" src="/hood-rivals-logo.png" alt="Hood Rivals"><span class="brand-name"><small>THE WORLD KEEPS MOVING</small></span></div>
+    <div class="brand"><img class="crest" src="/hood-rivals-logo-480.webp" srcset="/hood-rivals-logo-240.webp 1x, /hood-rivals-logo-480.webp 2x" width="155" height="62" alt="Hood Rivals" decoding="async"><span class="brand-name"><small>THE WORLD KEEPS MOVING</small></span></div>
     <div class="tchip signal" title="This preview runs entirely in your browser"><span class="signal-dot"></span>LOCAL WORLD SIMULATION</div>
     <div class="chipbar" id="chipbar"></div>
     <div class="ctrls" role="group" aria-label="Simulation controls">

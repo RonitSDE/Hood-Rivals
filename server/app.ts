@@ -9,6 +9,7 @@ import { config, type Config } from "./config";
 import { market } from "./market";
 import { shop } from "./shop";
 import { ClientError } from "./errors";
+import { staticAssets } from "./static";
 import {
   createGame,
   resolveRound,
@@ -54,7 +55,7 @@ export function createApp(c: Config = config) {
       "Referrer-Policy": "same-origin",
       "X-Frame-Options": embeddedWorld ? "SAMEORIGIN" : "DENY",
       "Content-Security-Policy":
-        `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; connect-src 'self' https: wss://relay.walletconnect.com wss://relay.walletconnect.org wss://www.walletlink.org; font-src 'self' https://fonts.gstatic.com; frame-src 'self' https://verify.walletconnect.com https://verify.walletconnect.org; frame-ancestors ${embeddedWorld ? "'self'" : "'none'"}; object-src 'none'; base-uri 'self'`,
+        `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https: wss://relay.walletconnect.com wss://relay.walletconnect.org wss://www.walletlink.org; font-src 'self'; frame-src 'self' https://verify.walletconnect.com https://verify.walletconnect.org; frame-ancestors ${embeddedWorld ? "'self'" : "'none'"}; object-src 'none'; base-uri 'self'`,
     });
     next();
   });
@@ -737,19 +738,21 @@ export function createApp(c: Config = config) {
       await store.confirm(user(req), req.params.id, String(req.body.hash)),
     ),
   );
-  app.use(express.static(resolve("dist"), { index: false }));
+  app.use(staticAssets("dist"));
+  let shellHtml = "";
+  const shell = () => (c.production && shellHtml) || (shellHtml = readFileSync(resolve("dist/index.html"), "utf8"));
   app.get('/rankings', (_req,res)=>{
-    const html=readFileSync(resolve('dist/index.html'),'utf8')
+    const html=shell()
       .replace('<title>Hood Rivals — A small world. A long memory.</title>','<title>Hood Rivals — Live Ranked Standings</title>')
       .replace('<meta property="og:title" content="Hood Rivals — A small world. A long memory." />','<meta property="og:title" content="Hood Rivals — Live Ranked Standings" />')
       .replace('<meta property="og:description" content="Lead your captain through a living pixel frontier. Free to play on Robinhood Chain testnet." />','<meta property="og:description" content="Seven-day rankings from completed matches. Explore the board and open each server replay." />')
-      .replace('<meta property="og:image" content="/hood-rivals-logo.png" />',`<meta property="og:image" content="${c.origin}/hood-rivals-logo.png" /><meta property="og:url" content="${c.origin}/rankings" /><meta name="twitter:card" content="summary_large_image" />`);
-    res.type('html').send(html);
+      .replace('<meta property="og:image" content="/og-image.jpg" />',`<meta property="og:image" content="${c.origin}/og-image.jpg" /><meta property="og:image:width" content="1200" /><meta property="og:image:height" content="630" /><meta property="og:url" content="${c.origin}/rankings" /><meta name="twitter:card" content="summary_large_image" />`);
+    res.set('Cache-Control','no-cache').type('html').send(html);
   });
   app.get("/{*path}", (req, res) => {
     if (req.path.startsWith("/api/"))
       return res.status(404).json({ error: "Unknown endpoint" });
-    res.sendFile(resolve("dist/index.html"));
+    res.set("Cache-Control", "no-cache").type("html").send(shell());
   });
   app.use((e: any, _req: any, res: any, _next: any) => {
     if (c.production && !(e instanceof ClientError) && !(e instanceof z.ZodError))

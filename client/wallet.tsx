@@ -1,8 +1,10 @@
 import { useEffect, useRef, type ReactNode } from "react";
+import { createRoot } from "react-dom/client";
 import "@rainbow-me/rainbowkit/styles.css";
 import { RainbowKitProvider, darkTheme, getDefaultConfig } from "@rainbow-me/rainbowkit";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { getAccount, type GetAccountReturnType } from "@wagmi/core";
+export { disconnect, getAccount, signMessage, switchChain } from "@wagmi/core";
 import { WagmiProvider, useAccount } from "wagmi";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import type { Chain } from "wagmi/chains";
@@ -61,6 +63,21 @@ export function connectWithRainbowKit() {
 }
 
 let openConnect: (() => void) | null = null;
+let readyResolve: (() => void) | null = null;
+const ready = new Promise<void>((resolve) => (readyResolve = resolve));
+let mounted = false;
+
+/** Mounts the wallet providers in their own root (once) and resolves when the connect modal is usable. */
+export function mountWallet(): Promise<void> {
+  if (!mounted) {
+    mounted = true;
+    const host = document.createElement("div");
+    host.id = "wallet-root";
+    document.body.appendChild(host);
+    createRoot(host).render(<WalletProviders />);
+  }
+  return ready;
+}
 
 function WalletBridge() {
   const { openConnectModal, connectModalOpen } = useConnectModal();
@@ -68,6 +85,7 @@ function WalletBridge() {
   const previous = useRef<string | undefined>(undefined);
   useEffect(() => {
     openConnect = openConnectModal ?? null;
+    if (openConnect) readyResolve?.();
   }, [openConnectModal]);
   useEffect(() => {
     if (previous.current && address && previous.current.toLowerCase() !== address.toLowerCase())
@@ -101,7 +119,7 @@ function WalletBridge() {
   return null;
 }
 
-export function WalletProviders({ children }: { children: ReactNode }) {
+export function WalletProviders({ children }: { children?: ReactNode }) {
   return (
     <WagmiProvider config={walletConfig}>
       <QueryClientProvider client={queryClient}>

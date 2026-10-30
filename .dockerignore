@@ -9,3 +9,8 @@ deployments
 launch-prepared.json
 launch-config.json
 *.zip
+brand-explorations
+reports
+dist
+coverage
+*.log
