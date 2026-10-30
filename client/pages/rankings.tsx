@@ -30,7 +30,7 @@ export default function RankingsPage() {
             disabled={board.loading || board.error}
             onClick={() => run(async () => setNotice(await shareRankings(board)))}
           >
-            Share public board ↗
+            Share public board
           </button>
           <button
             disabled={board.loading || board.error}
@@ -41,7 +41,7 @@ export default function RankingsPage() {
               })
             }
           >
-            Save social card ↓
+            Save social card
           </button>
           <small>Share link: {location.origin}/rankings</small>
         </div>
@@ -54,7 +54,7 @@ export default function RankingsPage() {
               <h2>{board.loading || board.error ? "Ranked captains" : `${board.total} ranked captains`}</h2>
             </div>
             <button disabled={busy} onClick={() => run(loadBoard)}>
-              Refresh ↻
+              Refresh
             </button>
           </div>
           {board.loading ? (
@@ -165,7 +165,7 @@ export default function RankingsPage() {
                         : navigate("/play?match=" + encodeURIComponent(h.id))
                     }
                   >
-                    {h.status === "finished" ? "Replay ↗" : "Resume"}
+                    {h.status === "finished" ? "Replay" : "Resume"}
                   </button>
                 </div>
               ))

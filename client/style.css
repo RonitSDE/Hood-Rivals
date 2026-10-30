@@ -411,7 +411,7 @@ nav button.active {
   padding: 14px 4%;
   color: #a0b191;
   font-size: 9px;
-  letter-spacing: 1.5px;
+  letter-spacing: 0;
   background: #152019;
   border-bottom: 1px solid #223024;
 }
@@ -440,12 +440,12 @@ nav button.active {
 .eyebrow {
   font-size: 10px;
   font-weight: 600;
-  letter-spacing: 2px;
+  letter-spacing: 0;
   color: #b8ce9d;
   line-height: 1.8;
 }
 h1 {
-  font-family: var(--font-display);
+  font-family: var(--font-heading);
   font-size: clamp(44px, 4.4vw, 72px);
   font-weight: 400;
   letter-spacing: -2.8px;
@@ -462,7 +462,7 @@ p {
   line-height: 1.75;
 }
 h2 {
-  font-family: var(--font-display);
+  font-family: var(--font-heading);
   font-size: 30px;
   font-weight: 400;
   margin: 15px 0;
@@ -501,7 +501,7 @@ h3 {
 }
 .micro {
   font-size: 8px;
-  letter-spacing: 1px;
+  letter-spacing: 0;
   color: #83957d;
   display: flex;
   align-items: center;
@@ -518,7 +518,7 @@ h3 {
   display: flex;
   justify-content: space-between;
   font-size: 9px;
-  letter-spacing: 1.4px;
+  letter-spacing: 0;
   color: #72816f;
   padding: 10px 16px;
 }
@@ -592,12 +592,12 @@ h3 {
 }
 .faction small {
   font-size: 8px;
-  letter-spacing: 1.5px;
+  letter-spacing: 0;
   color: #8c9d82;
 }
 .faction h3 {
   margin: 8px 0;
-  font-family: var(--font-display);
+  font-family: var(--font-heading);
   font-size: 21px;
 }
 .faction p {
@@ -710,7 +710,7 @@ select {
   display: block;
   color: #e0e8cb;
   font-size: 27px;
-  font-family: var(--font-display);
+  font-family: var(--font-heading);
   margin-bottom: 7px;
   font-weight: 400;
 }
@@ -735,7 +735,7 @@ select {
 }
 .order-card .row > b {
   font-size: 11px;
-  letter-spacing: 1px;
+  letter-spacing: 0;
 }
 .timer {
   font-size: 20px;
@@ -845,12 +845,12 @@ select {
 }
 .shop-card small {
   font-size: 9px;
-  letter-spacing: 1px;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   color: #9dac94;
 }
 .shop-card h3 {
-  font-family: var(--font-display);
+  font-family: var(--font-heading);
   font-size: 23px;
 }
 .shop-card p {
@@ -885,7 +885,7 @@ select {
 .economy-grid small {
   font-size: 9px;
   color: #8ea078;
-  letter-spacing: 1.4px;
+  letter-spacing: 0;
 }
 .economy-grid h2 {
   font-size: 40px;
@@ -967,7 +967,7 @@ footer {
   align-items: center;
   font-size: 10px;
   color: #7c9075;
-  letter-spacing: 1px;
+  letter-spacing: 0;
 }
 footer button {
   background: transparent;
@@ -1049,7 +1049,7 @@ footer > span:first-child {
   .network {
     font-size: 8px;
     padding: 12px 5%;
-    letter-spacing: 0.8px;
+    letter-spacing: 0;
   }
   .network > span:nth-child(2) {
     margin-left: auto;
@@ -1244,7 +1244,7 @@ footer > span:first-child {
   right: 0;
   color: #e5efcf;
   padding: 22px 27px;
-  letter-spacing: 1.6px;
+  letter-spacing: 0;
   pointer-events: none;
 }
 .map-heading > span:last-child {
@@ -1278,7 +1278,7 @@ footer > span:first-child {
   z-index: 4;
   pointer-events: none;
   font-size: 9px;
-  letter-spacing: 1.2px;
+  letter-spacing: 0;
   color: #d5e5c2;
 }
 .world-coordinate {
@@ -1298,7 +1298,7 @@ footer > span:first-child {
   top: 54px;
   right: 27px;
   text-align: right;
-  text-transform: uppercase;
+  text-transform: none;
 }
 .world-hover span {
   display: block;
@@ -1360,7 +1360,7 @@ footer > span:first-child {
   justify-content: space-between;
   align-items: center;
   font-size: 9px;
-  letter-spacing: 1.6px;
+  letter-spacing: 0;
   color: #c8e3a7;
 }
 .tile-intel-top button {
@@ -1372,7 +1372,7 @@ footer > span:first-child {
 }
 .tile-intel h3 {
   margin: 11px 0 4px;
-  font-family: var(--font-display);
+  font-family: var(--font-heading);
   font-size: 21px;
 }
 .tile-intel p {
@@ -1415,7 +1415,7 @@ footer > span:first-child {
   top: 52px;
   color: #c9e9ae;
   font-size: 9px;
-  letter-spacing: 1.4px;
+  letter-spacing: 0;
 }
 .fallback-map-note span {
   color: #dfbd76;
@@ -1482,12 +1482,12 @@ footer > span:first-child {
   transform: translate(-50%, -50%);
 }
 .fallback-hex-sigil {
-  font-family: var(--font-display);
+  font-family: var(--font-heading);
   font-size: clamp(13px, 2vw, 23px);
   line-height: 1;
 }
 .fallback-hex small {
-  text-transform: uppercase;
+  text-transform: none;
   letter-spacing: 0.05em;
   font-size: clamp(6px, 0.72vw, 8px);
   font-weight: 800;
@@ -1788,7 +1788,7 @@ footer > span:first-child {
 .captain-pass-identity small {
   display: block;
   font-size: 9px;
-  letter-spacing: 2px;
+  letter-spacing: 0;
   color: #cfdaaf;
 }
 .captain-pass-identity h2 {
@@ -1870,8 +1870,8 @@ footer > span:first-child {
   display: grid;
   gap: 8px;
   font-size: 11px;
-  letter-spacing: 1px;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   color: #d9e7d4;
 }
 .onboarding input {
@@ -2062,10 +2062,10 @@ footer > span:first-child {
 .frontier-path span {
   font-size: 10px;
   color: #a8c797;
-  letter-spacing: 2px;
+  letter-spacing: 0;
 }
 .frontier-path b {
-  font-family: var(--font-display);
+  font-family: var(--font-heading);
   font-size: 24px;
   margin: 9px 0;
 }
@@ -2081,7 +2081,7 @@ footer > span:first-child {
   margin: 25px 0 14px;
 }
 .world-section-heading h2 {
-  font-family: var(--font-display);
+  font-family: var(--font-heading);
   font-size: 29px;
   font-weight: normal;
   margin: 8px 0;
@@ -2130,7 +2130,7 @@ footer > span:first-child {
 }
 .training-guide h3 {
   margin: 8px 0;
-  font-family: var(--font-display);
+  font-family: var(--font-heading);
   font-size: 23px;
 }
 .training-guide p {
@@ -2174,11 +2174,11 @@ footer > span:first-child {
 }
 .decisive-moment small {
   font-size: 10px;
-  letter-spacing: 1.5px;
+  letter-spacing: 0;
   color: #d5ba79;
 }
 .decisive-moment h3 {
-  font-family: var(--font-display);
+  font-family: var(--font-heading);
   font-size: 25px;
   line-height: 1.35;
   font-weight: normal;
@@ -2218,7 +2218,7 @@ footer > span:first-child {
   backdrop-filter: blur(6px);
 }
 .experience-dialog h2 {
-  font-family: var(--font-display);
+  font-family: var(--font-heading);
   font-size: 32px;
   font-weight: normal;
   margin: 12px 0;
@@ -2623,7 +2623,7 @@ footer > span:first-child {
   display: block;
   color: #b3c19f;
   font-size: 10px;
-  letter-spacing: 1px;
+  letter-spacing: 0;
   margin-top: 8px;
 }
 .onboarding {
@@ -2827,7 +2827,7 @@ select:focus-visible {
 .rankings-teaser-head h2 {
   font-size: clamp(21px, 2.4vw, 30px);
   margin: 6px 0;
-  font-family: var(--font-display);
+  font-family: var(--font-heading);
 }
 .rankings-teaser-head button {
   min-height: 40px;
@@ -2917,7 +2917,7 @@ select:focus-visible {
 }
 .rankings-hero h1 {
   margin: 8px 0;
-  font-family: var(--font-display);
+  font-family: var(--font-heading);
   font-size: clamp(37px, 4vw, 66px);
   line-height: 1.02;
 }
@@ -3023,7 +3023,7 @@ select:focus-visible {
 }
 .rankings-tile strong small {
   font-size: 10px;
-  letter-spacing: 1px;
+  letter-spacing: 0;
 }
 .rankings-tile a {
   margin-top: auto;
@@ -3183,13 +3183,13 @@ select:focus-visible {
   background: #132519;
   color: #d9ff8a;
   font: 800 12px monospace;
-  letter-spacing: 2px;
+  letter-spacing: 0;
 }
 .agent-id-details {
   min-width: 0;
 }
 .agent-id-details h2 {
-  font-family: var(--font-display);
+  font-family: var(--font-heading);
   font-size: clamp(30px, 3vw, 46px);
   line-height: 1.08;
   margin: 7px 0 10px;
@@ -3251,7 +3251,7 @@ select:focus-visible {
   background: #dcff9e;
 }
 .guide-manual h3 {
-  font: normal 28px var(--font-display);
+  font: normal 28px var(--font-heading);
   margin: 24px 0 10px;
 }
 .guide-manual p {
@@ -3464,7 +3464,7 @@ p,
 }
 .guide-chapter h3 {
   margin: 0 0 9px;
-  font: normal clamp(23px, 3vw, 32px) var(--font-display);
+  font: normal clamp(23px, 3vw, 32px) var(--font-heading);
   color: #f4f9ff;
 }
 .guide-chapter p {

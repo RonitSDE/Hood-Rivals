@@ -2,6 +2,17 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { precompress } from "./scripts/vite-precompress.ts";
 
+// The API only accepts requests from APP_ORIGIN (default http://localhost:3000). In dev the page runs on
+// :5173, so the proxy presents forwarded requests as coming from the API's own origin.
+const apiOrigin = process.env.APP_ORIGIN || "http://localhost:3000";
+const devProxy = () => ({
+  target: "http://127.0.0.1:" + (process.env.PORT || 3000),
+  configure: (proxy: any) =>
+    proxy.on("proxyReq", (req: any) => {
+      if (req.getHeader("origin")) req.setHeader("origin", apiOrigin);
+    }),
+});
+
 export default defineConfig(({ command }) => {
   // `.env` sets NODE_ENV=development for the local API server. Without this guard Vite
   // picks that up and ships React's development build (~4x larger and much slower).
@@ -27,10 +38,7 @@ export default defineConfig(({ command }) => {
     },
     server: {
       port: 5173,
-      proxy: {
-        "/api": "http://127.0.0.1:3000",
-        "/healthz": "http://127.0.0.1:3000",
-      },
+      proxy: { "/api": devProxy(), "/healthz": devProxy() },
     },
   };
 });

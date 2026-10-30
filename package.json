@@ -7,7 +7,7 @@
     "node": ">=24.0.0 <25"
   },
   "scripts": {
-    "dev": "tsx watch server/index.ts",
+    "dev": "node --import tsx scripts/dev.ts",
     "dev:ui": "vite --host 0.0.0.0",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write \"client/**/*.{ts,tsx}\"",
@@ -23,7 +23,8 @@
     "preflight": "node --import tsx scripts/preflight.ts",
     "testnet:smoke": "node --import tsx scripts/testnet-smoke.ts",
     "backup": "node --import tsx scripts/backup.ts",
-    "economics": "node --import tsx scripts/economics.ts"
+    "economics": "node --import tsx scripts/economics.ts",
+    "dev:api": "tsx watch server/index.ts"
   },
   "dependencies": {
     "@openzeppelin/contracts": "5.0.2",

@@ -46,3 +46,23 @@ test("production origin, session cookie, CSRF, profile input and logout boundari
     runtime.close();
   }
 });
+
+test("development accepts loopback aliases of APP_ORIGIN only", async () => {
+  const runtime = createApp({ ...config, db: ":memory:", production: false, origin: "http://localhost:3000" });
+  const server = runtime.app.listen(0);
+  await new Promise<void>((resolve) => server.once("listening", resolve));
+  const base = `http://127.0.0.1:${(server.address() as any).port}`;
+  const status = async (origin: string) =>
+    (await fetch(base + "/api/session", { method: "POST", headers: { "content-type": "application/json", origin }, body: "{}" })).status;
+  try {
+    assert.equal(await status("http://localhost:3000"), 200);
+    assert.equal(await status("http://127.0.0.1:3000"), 200);
+    assert.equal(await status("http://[::1]:3000"), 200);
+    assert.equal(await status("http://127.0.0.1:5173"), 403);
+    assert.equal(await status("https://localhost:3000"), 403);
+    assert.equal(await status("http://attacker.example:3000"), 403);
+  } finally {
+    server.close();
+    runtime.close();
+  }
+});

@@ -24,7 +24,10 @@ export function precompress(minBytes = 1024): Plugin {
         if (!COMPRESSIBLE.test(file)) continue;
         const source = readFileSync(file);
         if (source.length < minBytes) continue;
-        writeFileSync(`${file}.br`, brotliCompressSync(source, { params: { [constants.BROTLI_PARAM_QUALITY]: 11 } }));
+        writeFileSync(
+          `${file}.br`,
+          brotliCompressSync(source, { params: { [constants.BROTLI_PARAM_QUALITY]: 11 } }),
+        );
         writeFileSync(`${file}.gz`, gzipSync(source, { level: 9 }));
       }
     },

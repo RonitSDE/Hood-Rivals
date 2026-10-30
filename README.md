@@ -34,16 +34,26 @@ Read `docs/RELEASE_V2.2.0.md` before deployment. This release does not turn the 
 
 Node **24** and npm required.
 
+**Development** (live reload, one command):
+
 ```sh
 npm ci
 cp .env.example .env
+npm run dev
+```
+
+Open `http://localhost:5173`. This runs the API on :3000 and the Vite dev server on :5173 together; keep `APP_ORIGIN=http://localhost:3000`.
+
+**Production-style** (what Docker runs):
+
+```sh
 npm run build
 npm start
 ```
 
-Open `http://localhost:3000`. The living island and guest tactical game need no wallet, API key or blockchain. `APP_ORIGIN` defaults to `http://localhost:3000` for this path. The Armory is disabled until contract configuration passes RPC checks.
+Open `http://localhost:3000`. `npm start` serves whatever is in `dist/`, so run `npm run build` again after changing client code; the server prints a warning when `dist/` is missing or older than the source.
 
-For development use two terminals: `npm run dev` and `npm run dev:ui`. Set `APP_ORIGIN=http://localhost:5173`. Production serves the Vite bundle and API from the same origin.
+The living island and guest tactical game need no wallet, API key or blockchain. The Armory is disabled until contract configuration passes RPC checks.
 
 ```sh
 npm test

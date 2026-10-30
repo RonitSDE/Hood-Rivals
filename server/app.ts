@@ -9,7 +9,7 @@ import { config, type Config } from "./config";
 import { market } from "./market";
 import { shop } from "./shop";
 import { ClientError } from "./errors";
-import { staticAssets } from "./static";
+import { staticAssets, MISSING_BUILD_PAGE } from "./static";
 import {
   createGame,
   resolveRound,
@@ -105,9 +105,28 @@ export function createApp(c: Config = config) {
     db.prepare("SELECT 1").get();
     res.json({ ready: true });
   });
+  // Production accepts only APP_ORIGIN. In development, localhost / 127.0.0.1 / [::1] on the same port are the
+  // same machine, so opening the site through any of them works.
+  const LOOPBACK = new Set(["localhost", "127.0.0.1", "[::1]"]);
+  const configured = new URL(c.origin);
+  const originAllowed = (origin: string) => {
+    if (origin === c.origin) return true;
+    if (c.production) return false;
+    try {
+      const url = new URL(origin);
+      return (
+        url.protocol === configured.protocol &&
+        url.port === configured.port &&
+        LOOPBACK.has(url.hostname) &&
+        LOOPBACK.has(configured.hostname)
+      );
+    } catch {
+      return false;
+    }
+  };
   app.use("/api", (req: any, res, next) => {
     if (!["GET", "HEAD", "OPTIONS"].includes(req.method)) {
-      if (req.headers.origin && req.headers.origin !== c.origin)
+      if (req.headers.origin && !originAllowed(req.headers.origin))
         return res.status(403).json({ error: "Origin rejected" });
       if (c.production && !req.headers.origin)
         return res.status(403).json({ error: "Origin required" });
@@ -738,7 +757,14 @@ export function createApp(c: Config = config) {
   );
   app.use(staticAssets("dist"));
   let shellHtml = "";
-  const shell = () => (c.production && shellHtml) || (shellHtml = readFileSync(resolve("dist/index.html"), "utf8"));
+  const shell = () => {
+    if (c.production && shellHtml) return shellHtml;
+    try {
+      return (shellHtml = readFileSync(resolve("dist/index.html"), "utf8"));
+    } catch {
+      return MISSING_BUILD_PAGE;
+    }
+  };
   app.get('/rankings', (_req,res)=>{
     const html=shell()
       .replace('<title>Hood Rivals — A small world. A long memory.</title>','<title>Hood Rivals — Live Ranked Standings</title>')

@@ -38,20 +38,20 @@ export default function ArmoryPage() {
                       : "♜"}
               </span>
             </div>
-            <button className="preview-button" onClick={() => setPreviewSkin(item.id)}>
-              Preview in the world ↗
-            </button>
             <small>{item.category}</small>
             <h3>{item.name}</h3>
             <p>{item.description}</p>
-            <div className="row">
+            <button className="preview-button" onClick={() => setPreviewSkin(item.id)}>
+              Preview in the world
+            </button>
+            <div className="row shop-price">
               <b>{(item.priceCents / 100).toFixed(2)} USDG</b>
               <span>Cosmetic</span>
             </div>
             {boot.inventory.includes(item.id) ? (
               <button disabled>Owned · equip in Captain</button>
             ) : (
-              <div className="row">
+              <div className="row shop-buy">
                 <button
                   disabled={busy || !boot.shop.enabled}
                   onClick={() =>
@@ -71,7 +71,7 @@ export default function ArmoryPage() {
                     })
                   }
                 >
-                  USDG
+                  Pay in USDG
                 </button>
                 <button
                   disabled={busy || !boot.shop.enabled || !boot.shop.rivalEnabled}
@@ -92,7 +92,7 @@ export default function ArmoryPage() {
                     })
                   }
                 >
-                  RIVAL
+                  Pay in RIVAL
                 </button>
               </div>
             )}

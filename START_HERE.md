@@ -7,9 +7,7 @@ With Node 24:
 ```sh
 npm ci --ignore-scripts
 cp .env.example .env
-npm run build
-npm test
-npm start
+npm run dev          # development: open http://localhost:5173
 ```
 
-Open http://localhost:3000. Guest play needs no wallet or contracts. A wallet-linked captain can run server-saved Agent Missions without an NFT. The Agent ID mint requires a separately deployed and opened testnet collection; checkout remains disabled until contracts, signer and assets are deployed and configured. Preserve the SQLite volume across deployments because it holds Agent ID tactical memory, missions and outpost resources. Log in uses RainbowKit. Browser extension wallets work without extra setup. QR pairing needs `VITE_WALLETCONNECT_PROJECT_ID` before the production build.
+or, production-style: `npm run build && npm start`, then open http://localhost:3000 (rebuild after client changes). Guest play needs no wallet or contracts. A wallet-linked captain can run server-saved Agent Missions without an NFT. The Agent ID mint requires a separately deployed and opened testnet collection; checkout remains disabled until contracts, signer and assets are deployed and configured. Preserve the SQLite volume across deployments because it holds Agent ID tactical memory, missions and outpost resources. Log in uses RainbowKit. Browser extension wallets work without extra setup. QR pairing needs `VITE_WALLETCONNECT_PROJECT_ID` before the production build.

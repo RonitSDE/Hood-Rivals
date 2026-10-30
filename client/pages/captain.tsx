@@ -158,7 +158,7 @@ export default function CaptainPage() {
                 ) : (
                   <>
                     <button disabled={busy} onClick={() => run(customizeAgent)}>
-                      Save look onchain ↗
+                      Save look onchain
                     </button>
                     <button className="primary" disabled={busy} onClick={() => start("solo", "agent")}>
                       Delegate a solo match

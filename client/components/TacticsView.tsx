@@ -152,11 +152,11 @@ export function TacticsView({ isReplay = false }: { isReplay?: boolean }) {
             </p>
             <div className="hero-buttons">
               <button className="primary" disabled={busy} onClick={() => start("solo")}>
-                Enter the frontier <span>↗</span>
+                Enter the frontier
               </button>
               {agent?.linked && (
                 <button className="secondary" disabled={busy} onClick={() => start("solo", "agent")}>
-                  Agent plays solo ↗
+                  Agent plays solo
                 </button>
               )}
               <button className="secondary" onClick={() => start("room")}>
@@ -225,7 +225,7 @@ export function TacticsView({ isReplay = false }: { isReplay?: boolean }) {
                     setSelected(guide.order.target || "");
                   }}
                 >
-                  Highlight suggested order ↗
+                  Highlight suggested order
                 </button>
                 <small>Practice has no timer, XP or ranked score.</small>
               </div>
@@ -459,7 +459,7 @@ export function TacticsView({ isReplay = false }: { isReplay?: boolean }) {
                 Invite a rival
               </button>
               <button disabled={busy} onClick={share}>
-                Share this battle ↗
+                Share this battle
               </button>
               <button
                 onClick={() =>
@@ -664,7 +664,6 @@ export function TacticsView({ isReplay = false }: { isReplay?: boolean }) {
                 <h3>{f.name}</h3>
                 <p>{f.tag}</p>
               </div>
-              <span>↗</span>
             </button>
           ))}
         </div>

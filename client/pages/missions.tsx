@@ -244,7 +244,7 @@ export default function MissionsPage() {
                 <span className="eyebrow">Step 3: read the runner's record</span>
                 <h2>What happened out there.</h2>
               </div>
-              <button onClick={() => run(loadMissions)}>Refresh record ↻</button>
+              <button onClick={() => run(loadMissions)}>Refresh record</button>
             </div>
             {missions.missions.length === 0 ? (
               <p className="mission-empty">
@@ -304,7 +304,7 @@ export default function MissionsPage() {
                         })
                       }
                     >
-                      Check record integrity ↗
+                      Check record integrity
                     </button>
                   </footer>
                   {missionProof[m.id] && (

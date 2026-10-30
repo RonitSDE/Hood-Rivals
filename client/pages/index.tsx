@@ -166,7 +166,7 @@ export default function IndexPage() {
           </button>
           {agent?.linked && (
             <button disabled={busy} onClick={() => start("solo", "agent")}>
-              Watch Agent #{agent.tokenId} play ↗
+              Watch Agent #{agent.tokenId} play
             </button>
           )}
           <button disabled={busy} onClick={() => start("room")}>
@@ -396,7 +396,7 @@ export default function IndexPage() {
                   <time dateTime={new Date(entry.created).toISOString()}>
                     {new Date(entry.created).toLocaleDateString()}
                   </time>
-                  <button onClick={() => openReplay(entry.match_id)}>Watch the real replay ↗</button>
+                  <button onClick={() => openReplay(entry.match_id)}>Watch the real replay</button>
                 </article>
               ))}
             </div>

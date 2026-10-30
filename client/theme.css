@@ -28,7 +28,9 @@
   --tide: #4c9be8;
   --sun: #f4bb3f;
 
+  /* Pixelify Sans only for large page headlines; at smaller sizes its C/O and 5/8/S blur together. */
   --font-display: "Pixelify Sans", "Chakra Petch", system-ui, sans-serif;
+  --font-heading: "Chakra Petch", system-ui, sans-serif;
   --font-sans: "Chakra Petch", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
 
@@ -131,7 +133,7 @@ body {
 h1,
 h2,
 h3 {
-  font-family: var(--font-display);
+  font-family: var(--font-heading);
   font-weight: 600;
   color: var(--foam);
   letter-spacing: 0;
@@ -202,7 +204,7 @@ small {
 .shop-card h3,
 .columns h2,
 .frontier-bottom h2 {
-  font-family: var(--font-display);
+  font-family: var(--font-heading);
   font-size: clamp(24px, 2.4vw, 32px);
   font-weight: 600;
   letter-spacing: 0;
@@ -249,7 +251,7 @@ kbd {
 .captain-pass-stats b,
 .mission-resource-grid b,
 .rankings-number {
-  font-family: var(--font-display);
+  font-family: var(--font-heading);
   font-weight: 600;
 }
 
@@ -915,7 +917,7 @@ header .wallet span {
 }
 .factions h3,
 .factions h2 {
-  font-family: var(--font-display);
+  font-family: var(--font-heading);
   font-size: 26px;
 }
 .join input {
@@ -1067,7 +1069,7 @@ header .wallet span {
 }
 .timer {
   color: var(--moss);
-  font-family: var(--font-display);
+  font-family: var(--font-heading);
 }
 
 /* ---------- Dialogs & toasts ---------- */
@@ -1225,6 +1227,285 @@ dialog,
   .map-wrap .map-heading > span:last-child {
     font-size: 12px;
     white-space: nowrap;
+  }
+}
+
+/* ==========================================================================
+   Polish pass: fixes found in the full-page audit
+   ========================================================================== */
+
+/* Large page headlines are the one place the pixel face is used. */
+main h1,
+.content > h1,
+.mission-page > h1,
+.rankings-hero h1,
+.living-intro h1,
+.hero-copy h1,
+.loading h1,
+.not-found h1 {
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+h2,
+h3 {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* Pixelify Sans joins "fi" into a glyph that reads as "A" ("Your Aeld guide"); keep letters separate. */
+:root {
+  font-variant-ligatures: none;
+  font-feature-settings:
+    "liga" 0,
+    "calt" 0;
+}
+
+/* Footer stays at the bottom of short pages. */
+#root {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+#root > main {
+  flex: 1 0 auto;
+}
+
+/* 404 */
+.not-found .row {
+  justify-content: flex-start;
+}
+
+/* Dialogs */
+.experience-dialog {
+  width: min(720px, calc(100vw - 32px));
+  padding: clamp(20px, 3vw, 32px);
+  background: var(--deep);
+  border: 0;
+  border-radius: 0;
+  clip-path: var(--step-l);
+  box-shadow: var(--ledge);
+}
+.experience-dialog::backdrop {
+  background: #081420d9;
+  backdrop-filter: blur(4px);
+}
+.experience-dialog .dialog-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+.experience-dialog .dialog-heading h2 {
+  margin: 0;
+  font-size: clamp(26px, 3vw, 34px);
+}
+.experience-dialog .dialog-close {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  font-size: 22px;
+  line-height: 1;
+}
+.experience-dialog p,
+.experience-dialog small {
+  color: var(--mist);
+}
+.onboarding-progress {
+  height: 6px;
+  background: var(--sea-deep);
+  border-radius: 0;
+}
+.onboarding-progress i {
+  background: var(--sand);
+}
+.guide-chapter {
+  background: var(--sea-deep);
+  border: 0;
+  border-radius: 0;
+  clip-path: var(--step-m);
+  box-shadow: none;
+}
+.guide-chapter h3 {
+  margin-top: 0;
+  font-size: 24px;
+}
+.guide-icon {
+  background: var(--sand);
+  color: var(--ink);
+  border: 0;
+  box-shadow: inset 0 -4px 0 var(--sand-ledge);
+  clip-path: var(--step-s);
+}
+.guide-audio button {
+  color: var(--foam);
+  background: var(--deep-2);
+}
+.rules-list {
+  padding-left: 24px;
+}
+.rules-list li {
+  margin: 10px 0;
+  color: var(--mist);
+}
+.rules-list li::marker {
+  color: var(--sand);
+  font-family: var(--font-heading);
+}
+.rules-list b {
+  color: var(--foam);
+}
+
+/* Armory cards: picture, name, description, then price and actions */
+.shop-grid {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+.shop-card {
+  display: flex;
+  flex-direction: column;
+  padding: 0 0 22px;
+}
+.shop-card > * {
+  margin-inline: 22px;
+}
+.shop-card .item-art {
+  height: 170px;
+  margin: 0 0 20px;
+  background: var(--sea-deep);
+}
+.shop-card .item-art span {
+  font-size: 72px;
+  text-shadow: none;
+}
+.shop-card > small {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--moss);
+}
+.shop-card h3 {
+  margin: 4px 22px 8px;
+  font-size: 26px;
+}
+.shop-card > p {
+  flex: 1 0 auto;
+  margin-top: 0;
+}
+.shop-card .preview-button {
+  width: auto;
+  margin-top: 4px;
+}
+.shop-card .shop-price {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 18px;
+}
+.shop-card .shop-price b {
+  font-family: var(--font-heading);
+  font-size: 24px;
+  color: var(--sand);
+}
+.shop-card .shop-price span {
+  color: var(--dim);
+  font-size: 13px;
+}
+.shop-card .shop-buy {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* Captain page */
+.passport {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin: 8px 0 28px;
+}
+.passport code {
+  color: var(--dim);
+}
+.passport-actions button,
+.passport-actions .button {
+  font-size: 15px;
+  padding: 12px 18px;
+}
+.agent-id-stamp {
+  border: 0;
+  background: var(--sea-deep);
+  color: var(--moss);
+  font: 600 13px var(--font-sans);
+  clip-path: var(--step-s);
+  box-shadow: inset 0 0 0 2px var(--moss);
+}
+
+/* Rankings share buttons */
+.rankings-share-actions button {
+  font-size: 15px;
+}
+
+/* Forms at a readable size */
+input,
+select,
+textarea {
+  font-size: 15px;
+  padding: 12px 14px;
+  min-height: 46px;
+}
+label {
+  font-size: 14px;
+}
+/* Match sidebar */
+.training-guide .row {
+  align-items: center;
+}
+.training-guide .text-button {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  font-size: 18px;
+  color: var(--mist);
+  text-decoration: none;
+}
+.timer {
+  font-family: var(--font-heading);
+  font-weight: 600;
+}
+/* Captain stats panel */
+.columns p,
+.columns small {
+  color: var(--mist);
+}
+.columns small {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+@media (max-width: 760px) {
+  .shop-grid {
+    grid-template-columns: 1fr;
+  }
+  .passport {
+    flex-wrap: wrap;
+  }
+  .passport-actions {
+    width: 100%;
+    grid-template-columns: 1fr;
+  }
+  .passport-actions button,
+  .passport-actions .button {
+    width: 100%;
+    font-size: 15px;
+  }
+  .rankings-share-actions {
+    grid-template-columns: 1fr;
+  }
+  .experience-dialog .dialog-heading h2 {
+    font-size: 24px;
   }
 }
 
