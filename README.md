@@ -76,7 +76,12 @@ No server endpoint launches tokens or holds a player's private key. No productio
 | `server/shop.ts` | Merchant quotes and verified purchase fulfilment |
 | `server/market.ts` | Optional Robinhood price snapshot adapter |
 | `public/observatory.html`, `public/observatory.js` | Isometric living island; independent browser simulation |
-| `client/` | Wallet-to-captain journey, saved account, Armory, tactical Three.js world |
+| `client/pages/` | One file per URL: `index.tsx` → `/`, `missions.tsx` → `/missions`, `replay/[id].tsx` → `/replay/:id`, `404.tsx` for unknown paths |
+| `client/router.tsx` | File-based router: builds routes from `client/pages/`, lazy-loads each page, `Link`/`navigate`/`useParams` |
+| `client/app/AppState.tsx` | Shared session, captain, wallet, match and mission state; pages read it with `useApp()` |
+| `client/components/` | Layout (header, nav, dialogs), tactical board view shared by Play and Replay, portraits |
+| `client/lib/` | API client and shared constants |
+| `client/theme.css` | Design tokens and the visual system (loaded after the legacy `style.css`) |
 | `client/sound.ts` | Optional browser narration and small synthesized cues |
 | `contracts/OutpostStore.sol` | Signed cosmetic payment split contract |
 | `contracts/RivalAgentID.sol` | Optional 3,333 customizable onchain Agent IDs |
@@ -84,6 +89,10 @@ No server endpoint launches tokens or holds a player's private key. No productio
 | `contracts/MockToken.sol` | Test fixture; not a mainnet token |
 | `scripts/` | Compile, deploy, preflight, backup, simulation, economics, launch preparation |
 | `test/` | Engine, HTTP service and EVM integration tests |
+
+### Adding a page
+
+Create `client/pages/<name>.tsx` with a default-exported component; it is served at `/<name>` with no other wiring. Use `[param].tsx` for dynamic segments and read them with `useParams()`. Link to it with `<Link to="/<name>">`. Add it to `NAV` in `client/components/Layout.tsx` if it belongs in the header.
 
 ## Boundaries
 

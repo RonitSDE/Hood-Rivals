@@ -16,9 +16,7 @@ import {
   validateOrder,
   viewGame,
   botOrder,
-  FACTIONS,
   type GameState,
-  type Order,
 } from "../shared/game";
 import { matchRecap } from "../shared/experience";
 import { agentOrder, type AgentStyle } from "../shared/agent";

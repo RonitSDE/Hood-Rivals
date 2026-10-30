@@ -17,6 +17,8 @@ export function loadWallet(): Promise<WalletModule> {
 export function prefetchWallet(delayMs = 0) {
   if (loading) return;
   const start = () => void loadWallet().catch(() => {});
-  const idle = (window as any).requestIdleCallback as undefined | ((cb: () => void, o?: { timeout: number }) => void);
+  const idle = (window as any).requestIdleCallback as
+    | undefined
+    | ((cb: () => void, o?: { timeout: number }) => void);
   window.setTimeout(() => (idle ? idle(start, { timeout: 4000 }) : start()), delayMs);
 }

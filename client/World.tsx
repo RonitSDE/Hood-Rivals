@@ -16,14 +16,7 @@ const HH = 16;
 const LIFT = 8;
 const place = (q: number, r: number) => ({ x: (q - r) * HW, y: (q + r) * HH });
 
-function fillDiamond(
-  ctx: CanvasRenderingContext2D,
-  cx: number,
-  cy: number,
-  color: string,
-  hw = HW,
-  hh = HH,
-) {
+function fillDiamond(ctx: CanvasRenderingContext2D, cx: number, cy: number, color: string, hw = HW, hh = HH) {
   ctx.fillStyle = color;
   const top = Math.round(cy - hh);
   const bot = Math.round(cy + hh);
@@ -34,7 +27,8 @@ function fillDiamond(
 }
 
 function pine(ctx: CanvasRenderingContext2D, x: number, y: number, n: number) {
-  const pal = n % 2 ? ["#1b3826", "#2a5634", "#3b743b", "#5a9348"] : ["#173424", "#24503a", "#33704a", "#4d8d5b"];
+  const pal =
+    n % 2 ? ["#1b3826", "#2a5634", "#3b743b", "#5a9348"] : ["#173424", "#24503a", "#33704a", "#4d8d5b"];
   ctx.fillStyle = "#4b3121";
   ctx.fillRect(x - 1, y - 6, 2, 6);
   ctx.fillStyle = "#36231a";
@@ -182,7 +176,9 @@ export function World({ game, cosmetic, selected, reachable, onSelect, onHover }
     const side = night ? "#1a2c3c" : "#3d5c34";
     const points: Record<string, { x: number; y: number }> = {};
     for (const tile of game.tiles) points[tile.id] = place(tile.q, tile.r);
-    const ordered = [...game.tiles].sort((a, b) => points[a.id].y - points[b.id].y || points[a.id].x - points[b.id].x);
+    const ordered = [...game.tiles].sort(
+      (a, b) => points[a.id].y - points[b.id].y || points[a.id].x - points[b.id].x,
+    );
     const you = game.you ?? 0;
     const actors = game.factions
       .filter((f: any) => f.pos && points[f.pos])
@@ -251,7 +247,13 @@ export function World({ game, cosmetic, selected, reachable, onSelect, onHover }
     };
     let drag: { x: number; y: number; camX: number; camY: number; moved: boolean } | null = null;
     const down = (event: PointerEvent) => {
-      drag = { x: event.clientX, y: event.clientY, camX: camera.current.x, camY: camera.current.y, moved: false };
+      drag = {
+        x: event.clientX,
+        y: event.clientY,
+        camX: camera.current.x,
+        camY: camera.current.y,
+        moved: false,
+      };
       canvas.setPointerCapture(event.pointerId);
     };
     const move = (event: PointerEvent) => {
@@ -297,7 +299,8 @@ export function World({ game, cosmetic, selected, reachable, onSelect, onHover }
       else if (event.key === "ArrowRight") camera.current.x += step;
       else if (event.key === "ArrowUp") camera.current.y -= step;
       else if (event.key === "ArrowDown") camera.current.y += step;
-      else if (event.key === "+" || event.key === "=") camera.current.zoom = Math.min(3.2, camera.current.zoom * 1.12);
+      else if (event.key === "+" || event.key === "=")
+        camera.current.zoom = Math.min(3.2, camera.current.zoom * 1.12);
       else if (event.key === "-") camera.current.zoom = Math.max(1, camera.current.zoom * 0.9);
       else return;
       event.preventDefault();
@@ -445,7 +448,12 @@ export function World({ game, cosmetic, selected, reachable, onSelect, onHover }
         }
       }
       if (chosen && points[chosen]) {
-        outline(ctx, points[chosen].x, points[chosen].y - LIFT - (reduced ? 0 : Math.sin(time * 0.005)), "#fff4cd");
+        outline(
+          ctx,
+          points[chosen].x,
+          points[chosen].y - LIFT - (reduced ? 0 : Math.sin(time * 0.005)),
+          "#fff4cd",
+        );
       }
       ctx.restore();
 
@@ -486,7 +494,11 @@ export function World({ game, cosmetic, selected, reachable, onSelect, onHover }
       {fallback ? (
         <div className="world-fallback" role="group" aria-label="Text map, use buttons to inspect a hex">
           {game.tiles.map((tile: any) => (
-            <button key={tile.id} className={tile.id === selected ? "active" : ""} onClick={() => callback.current?.(tile.id)}>
+            <button
+              key={tile.id}
+              className={tile.id === selected ? "active" : ""}
+              onClick={() => callback.current?.(tile.id)}
+            >
               {tile.id} · {tile.kind}
             </button>
           ))}
@@ -497,12 +509,39 @@ export function World({ game, cosmetic, selected, reachable, onSelect, onHover }
           <div className="world-vignette" aria-hidden="true" />
           <div className="world-coordinate">N · 01 / FRONTIER</div>
           <div className="world-controls" aria-label="World camera controls">
-            <button type="button" title="Zoom in" aria-label="Zoom in" onClick={() => control.current?.zoom(-1)}>+</button>
-            <button type="button" title="Zoom out" aria-label="Zoom out" onClick={() => control.current?.zoom(1)}>−</button>
-            <button type="button" title="Reset camera" aria-label="Reset camera" onClick={() => control.current?.reset()}>⌕</button>
+            <button
+              type="button"
+              title="Zoom in"
+              aria-label="Zoom in"
+              onClick={() => control.current?.zoom(-1)}
+            >
+              +
+            </button>
+            <button
+              type="button"
+              title="Zoom out"
+              aria-label="Zoom out"
+              onClick={() => control.current?.zoom(1)}
+            >
+              −
+            </button>
+            <button
+              type="button"
+              title="Reset camera"
+              aria-label="Reset camera"
+              onClick={() => control.current?.reset()}
+            >
+              ⌕
+            </button>
           </div>
-          <div className="world-guide">PAN <span>·</span> ZOOM <span>·</span> SELECT A HEX</div>
-          {hovered && <div className="world-hover" aria-hidden="true">{hovered} <span>{game.tiles.find((tile: any) => tile.id === hovered)?.kind}</span></div>}
+          <div className="world-guide">
+            PAN <span>·</span> ZOOM <span>·</span> SELECT A HEX
+          </div>
+          {hovered && (
+            <div className="world-hover" aria-hidden="true">
+              {hovered} <span>{game.tiles.find((tile: any) => tile.id === hovered)?.kind}</span>
+            </div>
+          )}
         </>
       )}
     </div>

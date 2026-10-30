@@ -59,7 +59,7 @@ test('specialists earn five saved materials, gated routes and old receipts remai
     let board=missionBoard(db,'specialist',t+MISSION_STEP_MS*7+1);
     assert.equal(board.store.ore,2);
     assert.equal(verifyMission(db,'specialist',ore)?.intact,true);
-    const intel=launchMission(db,'specialist','relay','careful',0,null,t+MISSION_STEP_MS*8,'scout');
+    launchMission(db,'specialist','relay','careful',0,null,t+MISSION_STEP_MS*8,'scout');
     advanceMissions(db,t+MISSION_STEP_MS*11+1);
     board=missionBoard(db,'specialist',t+MISSION_STEP_MS*11+1);
     assert.equal(board.store.intel,2);
