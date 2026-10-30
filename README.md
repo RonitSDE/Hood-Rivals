@@ -32,7 +32,7 @@ Read `docs/RELEASE_V2.2.0.md` before deployment. This release does not turn the 
 
 ## Run locally
 
-Node **24** and npm required.
+Node **24** recommended (22.13 is the minimum; older versions lack the built-in SQLite the game uses). `npm run dev` and `npm start` first check Node, installed packages, `.env` and free ports, and print the exact fix if something is wrong.
 
 **Development** (live reload, one command):
 

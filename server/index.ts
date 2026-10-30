@@ -10,6 +10,14 @@ const server = runtime.app.listen(config.port, () => {
     else console.log(`Open http://localhost:${config.port}`);
   }
 });
+server.on("error", (error: NodeJS.ErrnoException) => {
+  if (error.code === "EADDRINUSE")
+    console.error(
+      `\n  ✖ Port ${config.port} is already in use. Stop the other server (or set PORT in .env) and try again.\n`,
+    );
+  else console.error(error);
+  process.exit(1);
+});
 runtime.store.check().then((s) => console.log("Checkout:", s.reason));
 for (const signal of ["SIGTERM", "SIGINT"])
   process.on(signal, () =>
