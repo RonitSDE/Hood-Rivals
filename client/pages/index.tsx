@@ -332,7 +332,7 @@ export default function IndexPage() {
                     <b>#{p.rank}</b> {p.name}
                   </span>
                   <strong>{p.score} renown</strong>
-                  <a href={"/?replay=" + encodeURIComponent(p.matchId)}>Replay ↗</a>
+                  <Link to={"/replay/" + encodeURIComponent(p.matchId)}>Replay</Link>
                 </div>
               ))}
             </div>

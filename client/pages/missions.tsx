@@ -60,15 +60,15 @@ export default function MissionsPage() {
           <section className="mission-resource-grid" aria-label="Saved outpost stores">
             <div>
               <b>▥ {missions.store.wood}</b>
-              <span>WOOD</span>
+              <span>Wood</span>
             </div>
             <div>
               <b>◆ {missions.store.stone}</b>
-              <span>STONE</span>
+              <span>Stone</span>
             </div>
             <div>
               <b>◈ {missions.store.food}</b>
-              <span>FOOD</span>
+              <span>Food</span>
             </div>
             <div>
               <b>⬡ {missions.store.ore}</b>
@@ -76,11 +76,11 @@ export default function MissionsPage() {
             </div>
             <div>
               <b>⌁ {missions.store.intel}</b>
-              <span>INTEL</span>
+              <span>Intel</span>
             </div>
             <div>
               <b>✧ {missions.store.beacon_level}/3</b>
-              <span>BEACON</span>
+              <span>Beacon</span>
             </div>
           </section>
           <div className="mission-grid">
@@ -223,17 +223,17 @@ export default function MissionsPage() {
             <div className="mission-pass-grid">
               <article>
                 <strong>Free captain</strong>
-                <span>AVAILABLE NOW</span>
+                <span>Available now</span>
                 <p>One specialist at a time · three missions daily · full human tactical play.</p>
               </article>
               <article>
                 <strong>Scout Pass</strong>
-                <span>NOT FOR SALE</span>
+                <span>Not for sale</span>
                 <p>Proposed: a short offline queue, a second specialist slot and return alerts.</p>
               </article>
               <article>
                 <strong>Command Pass</strong>
-                <span>NOT FOR SALE</span>
+                <span>Not for sale</span>
                 <p>Proposed: conditional job plans, longer capped offline work and a decision report.</p>
               </article>
             </div>

@@ -164,7 +164,7 @@ export function TacticsView({ isReplay = false }: { isReplay?: boolean }) {
               </button>
             </div>
             <div className="micro">
-              NO WALLET NEEDED <span>·</span> SIX ROUNDS <span>·</span> THREE FACTIONS
+              No wallet needed <span>·</span> six rounds <span>·</span> three factions
             </div>
           </>
         )}
@@ -237,7 +237,7 @@ export function TacticsView({ isReplay = false }: { isReplay?: boolean }) {
               </button>
             </div>
             <div className="row">
-              <b>ROUND {game.round} / 6</b>
+              <b>Round {game.round} of 6</b>
               <span className="timer">
                 {game.mode === "training"
                   ? "Your pace"
@@ -259,8 +259,8 @@ export function TacticsView({ isReplay = false }: { isReplay?: boolean }) {
               <div className="control-switch">
                 <b>
                   {game.control === "agent"
-                    ? `AGENT MODE · Agent #${game.agentTokenId} is playing`
-                    : "HUMAN MODE · You control this captain"}
+                    ? `Agent mode: Agent #${game.agentTokenId} is playing`
+                    : "Human mode: you control this captain"}
                 </b>
                 <button
                   disabled={busy || game.submitted || (game.control === "human" && !agent?.linked)}
@@ -432,7 +432,7 @@ export function TacticsView({ isReplay = false }: { isReplay?: boolean }) {
               <small>
                 {recap.moment
                   ? `ROUND ${recap.moment.round} / ${recap.moment.kind.toUpperCase()}`
-                  : "YOUR FRONTIER"}
+                  : "Your frontier"}
               </small>
               <h3>{recap.moment?.text || "Six rounds written into the archive."}</h3>
             </div>
@@ -514,10 +514,8 @@ export function TacticsView({ isReplay = false }: { isReplay?: boolean }) {
       </div>
       <div className="map-wrap">
         <div className="map-heading">
-          <span>
-            <span className="map-sigil">✥</span> THE FIRST FRONTIER
-          </span>
-          <span>{showGame ? "TACTICAL VIEW" : "37 HEXES · INFINITE RIVALRIES"}</span>
+          <h2>The first frontier</h2>
+          <span>{showGame ? `Round ${game.round} of 6` : "37 hexes, three rivals"}</span>
         </div>
         <World
           game={shown}
@@ -581,8 +579,10 @@ export function TacticsView({ isReplay = false }: { isReplay?: boolean }) {
           </div>
         )}
         <div className="map-caption">
-          <span>◈ Scout. Develop. Contest.</span>
-          <span>{showGame ? "Tap a glowing hex to plan" : "Drag to orbit · select to inspect"}</span>
+          <span>Scout, develop, contest.</span>
+          <span>
+            {showGame ? "Tap a glowing hex to plan your order" : "Drag to move, select a hex to inspect"}
+          </span>
         </div>
         {showGame && (
           <div className="rival-strip">
@@ -625,7 +625,7 @@ export function TacticsView({ isReplay = false }: { isReplay?: boolean }) {
             <div className="row">
               <input
                 aria-label="Room code"
-                placeholder="ROOM CODE"
+                placeholder="Room code"
                 maxLength={8}
                 value={room}
                 onChange={(e) => setRoom(e.target.value.toUpperCase())}

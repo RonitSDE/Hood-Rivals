@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { shareRankings, downloadRankingsCard } from "../share";
-import { navigate, usePageTitle } from "../router";
+import { navigate, usePageTitle, Link } from "../router";
 import { useApp } from "../app/AppState";
 
 export default function RankingsPage() {
@@ -72,7 +72,7 @@ export default function RankingsPage() {
                     </span>
                     <h3>{p.name}</h3>
                     <strong>
-                      {p.score} <small>RENOWN</small>
+                      {p.score} <small>renown</small>
                     </strong>
                     <time dateTime={new Date(p.created).toISOString()}>
                       {new Date(p.created).toLocaleDateString(undefined, {
@@ -82,7 +82,7 @@ export default function RankingsPage() {
                       })}{" "}
                       UTC
                     </time>
-                    <a href={"/?replay=" + encodeURIComponent(p.matchId)}>Open match replay ↗</a>
+                    <Link to={"/replay/" + encodeURIComponent(p.matchId)}>Open match replay</Link>
                   </article>
                 ))}
               </div>
@@ -100,7 +100,7 @@ export default function RankingsPage() {
                       })}{" "}
                       UTC
                     </time>
-                    <a href={"/?replay=" + encodeURIComponent(p.matchId)}>Replay ↗</a>
+                    <Link to={"/replay/" + encodeURIComponent(p.matchId)}>Replay</Link>
                   </div>
                 ))}
               </div>
@@ -115,7 +115,7 @@ export default function RankingsPage() {
             <p className="rankings-me">
               Your place: #{board.me.rank} · {board.me.score} Renown · {board.me.attempts} attempt
               {board.me.attempts === 1 ? "" : "s"}{" "}
-              <a href={"/?replay=" + encodeURIComponent(board.me.matchId)}>Open your best match ↗</a>
+              <Link to={"/replay/" + encodeURIComponent(board.me.matchId)}>Open your best match</Link>
             </p>
           )}
           <p className="rankings-proof">

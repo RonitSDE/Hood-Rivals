@@ -465,6 +465,45 @@ body{background:radial-gradient(ellipse 65% 65% at 45% -12%,#178eaf47,transparen
 .saved-build{display:grid;gap:5px;border-top:1px solid #426a65;padding-top:9px}.saved-build strong{color:#d9ff93}.saved-build button{background:#b5ff39;color:#13331c;border-color:#d3ff89}
 .saved-feedback{color:#ffe09c!important}.saved-note{font-size:10px!important;color:#a4c8c5!important}
 @media(max-width:900px){.embedded .saved-outpost{top:auto;bottom:114px;left:8px;width:min(245px,calc(100% - 125px))}.saved-body{max-height:45vh}.saved-ledger span{font-size:8px}.saved-ledger b{font-size:12px}}
+
+/* ==== Site theme: the living world uses the same tokens, type and shapes as the rest of Hood Rivals (client/theme.css). ==== */
+:root{
+  --bg:#0f2233;--panel:rgba(22,52,73,.95);--panel2:#1c3f57;--line:#2b5a74;--line2:#3d7896;
+  --fg:#eef4f2;--muted:#aac2c8;--label:#aac2c8;--amber:#ecd9a4;--good:#9fd86d;--bad:#e8643f;--teal:#5fd6c8;--mind:#c79bff;
+  --ui:'Chakra Petch',system-ui,sans-serif;--display:'Pixelify Sans','Chakra Petch',sans-serif;
+  --step-s:polygon(0 3px,3px 3px,3px 0,calc(100% - 3px) 0,calc(100% - 3px) 3px,100% 3px,100% calc(100% - 3px),calc(100% - 3px) calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,3px calc(100% - 3px),0 calc(100% - 3px));
+  --step-m:polygon(0 8px,4px 8px,4px 4px,8px 4px,8px 0,calc(100% - 8px) 0,calc(100% - 8px) 4px,calc(100% - 4px) 4px,calc(100% - 4px) 8px,100% 8px,100% calc(100% - 8px),calc(100% - 4px) calc(100% - 8px),calc(100% - 4px) calc(100% - 4px),calc(100% - 8px) calc(100% - 4px),calc(100% - 8px) 100%,8px 100%,8px calc(100% - 4px),4px calc(100% - 4px),4px calc(100% - 8px),0 calc(100% - 8px));
+  --ledge:inset 0 2px 0 #ffffff12,inset 0 -4px 0 #00000040;
+}
+html,body{background:var(--bg)}
+body{font-family:var(--ui)}
+/* sentence case everywhere; no tracked-out caps */
+.ctrls button,.tchip,.lbl,.fh,.fh button,#feedT,.hint,.island-compass,.island-compass span,.directory-head,.directory-filters,#miniLbl,.mini,.feed,.banner .bx,.saved-outpost,.saved-toggle b,.saved-toggle span{text-transform:none!important;letter-spacing:0!important}
+/* panels: deep water with stepped pixel corners */
+.watch,.right .card,.feed,.mini,.banner .bx,.embedded .watch,.embedded .right,.embedded .feed,.embedded .mini,.embedded .banner .bx,.saved-outpost,.ctrls,.island-compass,.hint{
+  background:var(--panel)!important;border:0!important;border-radius:0!important;clip-path:var(--step-m);box-shadow:var(--ledge)!important;backdrop-filter:none!important}
+.hint,.island-compass{clip-path:var(--step-s)}
+.lbl,.fh .lbl,#miniLbl{font:600 12px var(--ui)!important;color:var(--good)!important}
+.feed .fl,.feed .fl *{font-family:var(--ui)}
+.hint{color:var(--muted)!important;font:500 12px var(--ui)!important}
+/* controls: same buttons as the site */
+.ctrls button,.island-compass button,.saved-outpost button,.directory-filters button{
+  font:600 12px var(--ui)!important;color:var(--fg);background:var(--panel2)!important;border:0!important;border-radius:0!important;
+  clip-path:var(--step-s);box-shadow:var(--ledge),inset 0 0 0 2px var(--line)!important}
+.ctrls button:hover,.island-compass button:hover,.saved-outpost button:hover:not(:disabled){background:#24506b!important;color:#fff}
+.ctrls button.on{background:var(--panel2)!important;color:var(--good)!important;box-shadow:var(--ledge),inset 0 0 0 2px var(--good)!important}
+.island-compass button{color:var(--fg)!important;background:transparent!important;box-shadow:none!important}
+.island-compass button:hover{color:var(--amber)!important}
+.saved-build button,.saved-outpost .primary{background:var(--amber)!important;color:#081420!important;box-shadow:inset 0 2px 0 #ffffff70,inset 0 -4px 0 #a98f55!important}
+.saved-toggle{background:#1b3a2a!important}
+.saved-toggle b{color:var(--good)!important;font:600 12px var(--ui)!important}
+.saved-ledger span{border:0!important;border-radius:0!important;background:#0b1a28!important;clip-path:var(--step-s)}
+.saved-ledger b{font-family:var(--display)!important}
+.tchip{background:var(--panel2)!important;border:0!important;border-radius:0!important;clip-path:var(--step-s)}
+.signal-dot{background:var(--good)!important;box-shadow:none!important;border-radius:0!important}
+.banner .bx b,.banner .bx strong,.watch h2,.watch h3,.right h2,.right h3{font-family:var(--display);font-weight:600;letter-spacing:0}
+input,select{font-family:var(--ui);border-radius:0!important;background:#0b1a28!important;border:2px solid var(--line)!important;color:var(--fg)}
+button:focus-visible{outline:none!important;box-shadow:inset 0 0 0 3px var(--good)!important}
 </style>
 </head>
 <body>
@@ -489,11 +528,11 @@ body{background:radial-gradient(ellipse 65% 65% at 45% -12%,#178eaf47,transparen
       <div class="world-stamp"><span class="signal-dot"></span> The living frontier</div>
       <div class="banner" id="banner"></div>
       <aside class="saved-outpost" id="savedOutpost" aria-label="Saved outpost mission control">
-        <button id="savedToggle" class="saved-toggle" aria-expanded="false"><b>✦ SAVED OUTPOST</b><span id="savedSummary">Loading…</span></button>
+        <button id="savedToggle" class="saved-toggle" aria-expanded="false"><b>✦ Saved outpost</b><span id="savedSummary">Loading…</span></button>
         <div id="savedBody" class="saved-body" hidden></div>
       </aside>
       <div class="mini card"><div class="lbl"><span>Map</span><span class="mono" id="miniLbl"></span></div><canvas id="mini"></canvas></div>
-      <div class="island-compass" aria-label="Jump to outpost"><span>TRAVEL TO</span><button data-outpost="0">Emberhold</button><button data-outpost="1">Tidewatch</button><button data-outpost="2">Sunreach</button></div>
+      <div class="island-compass" aria-label="Jump to outpost"><span>Travel to</span><button data-outpost="0">Emberhold</button><button data-outpost="1">Tidewatch</button><button data-outpost="2">Sunreach</button></div>
       <div class="hint">Drag to explore · pinch or scroll to zoom · select an agent</div>
     </div>
     <aside class="watch card" id="watch" aria-label="Watched agent"></aside>
@@ -503,7 +542,7 @@ body{background:radial-gradient(ellipse 65% 65% at 45% -12%,#178eaf47,transparen
 </div>
 
 <dialog id="agentDirectory" aria-label="Find an agent">
- <div class="directory-head"><div><span class="lbl">LOCAL AGENT DIRECTORY</span><h2>Find a mind to follow.</h2></div><button id="closeDirectory" aria-label="Close agent directory">×</button></div>
+ <div class="directory-head"><div><span class="lbl">Local agent directory</span><h2>Find a mind to follow.</h2></div><button id="closeDirectory" aria-label="Close agent directory">×</button></div>
  <p>These agents belong to this browser simulation. Pin favourites for this world and watch their decisions.</p>
  <div class="directory-filters"><input id="agentSearch" type="search" maxlength="60" placeholder="Search by name or role" aria-label="Search agents"><select id="agentTeam" aria-label="Filter agents by outpost"><option value="all">All outposts</option><option value="0">Emberhold</option><option value="1">Tidewatch</option><option value="2">Sunreach</option></select><select id="agentStatus" aria-label="Filter agent activity"><option value="all">All activity</option><option value="pinned">Pinned</option><option value="captains">Captains</option><option value="combat">In combat</option></select></div>
  <div id="directoryCount" class="lbl" role="status"></div><div id="directoryResults"></div>

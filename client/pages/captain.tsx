@@ -66,7 +66,7 @@ export default function CaptainPage() {
         <div className="agent-id-visual">
           <AgentPortrait look={lookChoice} />
           <span className="agent-id-stamp">
-            {agent?.tokenId ? `AGENT #${String(agent.tokenId).padStart(4, "0")}` : "YOUR AGENT ID"}
+            {agent?.tokenId ? `Agent #${String(agent.tokenId).padStart(4, "0")}` : "Your Agent ID"}
           </span>
         </div>
         <div className="agent-id-details">

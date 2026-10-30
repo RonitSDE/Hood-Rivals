@@ -352,10 +352,16 @@ export function World({ game, cosmetic, selected, reachable, onSelect, onHover }
           ctx.fillRect(Math.round(spark.x + drift), Math.round(spark.y), 2, 1);
         }
       }
-      ctx.fillStyle = night ? "rgba(6,14,24,.35)" : "rgba(8,28,18,.28)";
-      ctx.beginPath();
-      ctx.ellipse(0, 18, 236, 86, 0, 0, Math.PI * 2);
-      ctx.fill();
+      // Shallows and a sand shore that trace the board's outline, in the living island's palette.
+      for (const tile of ordered) {
+        const pos = points[tile.id];
+        fillDiamond(ctx, pos.x, pos.y - LIFT + 12, night ? "#1a3a52" : "#2a6688", HW + 16, HH + 8);
+      }
+      for (const tile of ordered) {
+        const pos = points[tile.id];
+        fillDiamond(ctx, pos.x, pos.y - LIFT + 11, night ? "#24384c" : "#b9a26c", HW + 7, HH + 4);
+        fillDiamond(ctx, pos.x, pos.y - LIFT + 9, night ? "#2e4258" : "#d9c48c", HW + 6, HH + 3);
+      }
 
       for (const tile of ordered) {
         const pos = points[tile.id];
@@ -507,7 +513,6 @@ export function World({ game, cosmetic, selected, reachable, onSelect, onHover }
         <>
           <canvas ref={canvasRef} />
           <div className="world-vignette" aria-hidden="true" />
-          <div className="world-coordinate">N · 01 / FRONTIER</div>
           <div className="world-controls" aria-label="World camera controls">
             <button
               type="button"
@@ -534,9 +539,7 @@ export function World({ game, cosmetic, selected, reachable, onSelect, onHover }
               ⌕
             </button>
           </div>
-          <div className="world-guide">
-            PAN <span>·</span> ZOOM <span>·</span> SELECT A HEX
-          </div>
+          <div className="world-guide">Drag to pan, scroll to zoom</div>
           {hovered && (
             <div className="world-hover" aria-hidden="true">
               {hovered} <span>{game.tiles.find((tile: any) => tile.id === hovered)?.kind}</span>

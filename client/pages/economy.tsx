@@ -18,7 +18,7 @@ export default function EconomyPage() {
       </p>
       <div className="economy-grid">
         <section className="panel">
-          <small>CANONICAL TOKEN</small>
+          <small>Canonical token</small>
           <h2>RIVAL</h2>
           <p>
             Planned o1 Standard launch on Robinhood Chain. Fixed launch supply: 1 billion. The launch pool
@@ -45,7 +45,7 @@ export default function EconomyPage() {
           <p>USDG checkout: 100% treasury. Launchpad trading fees are separate from game checkout.</p>
         </section>
         <section className="panel">
-          <small>NO FINANCIAL SHORTCUTS</small>
+          <small>No financial shortcuts</small>
           <h2>Earn reputation.</h2>
           <p>
             Wins earn nontransferable XP. Purchases unlock visual identity only. More token holders do not

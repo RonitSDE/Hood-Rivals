@@ -177,7 +177,7 @@ export function Layout() {
         </div>
       )}
       <footer>
-        <span>HOOD RIVALS</span>
+        <span>Hood Rivals</span>
         <span>A small world. A long memory. · v{boot.release?.version || "1.3.0"}</span>
         <Link to="/economy">Read the economy</Link>
       </footer>
