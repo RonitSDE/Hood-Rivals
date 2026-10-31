@@ -49,6 +49,16 @@ export function database(path: string) {
   const matchColumns=db.prepare('PRAGMA table_info(matches)').all() as {name:string}[];
   if(!matchColumns.some(c=>c.name==='control')) db.exec("ALTER TABLE matches ADD COLUMN control TEXT NOT NULL DEFAULT 'human'");
   if(!matchColumns.some(c=>c.name==='agent_token_id')) db.exec('ALTER TABLE matches ADD COLUMN agent_token_id INTEGER');
+  // AI captains (0G Compute): who the rival captains are, when the current round opened,
+  // each AI decision with its reasoning, and the notes AI characters keep between matches.
+  if(!matchColumns.some(c=>c.name==='rivals')) db.exec("ALTER TABLE matches ADD COLUMN rivals TEXT NOT NULL DEFAULT 'classic'");
+  if(!matchColumns.some(c=>c.name==='round_started')) db.exec('ALTER TABLE matches ADD COLUMN round_started INTEGER');
+  db.exec(`CREATE TABLE IF NOT EXISTS agent_decisions(
+    match_id TEXT NOT NULL REFERENCES matches(id), round INTEGER NOT NULL, slot INTEGER NOT NULL, character TEXT NOT NULL,
+    status TEXT NOT NULL, source TEXT, order_json TEXT, reason TEXT, model TEXT, response_id TEXT, tee_verified INTEGER,
+    latency_ms INTEGER, error TEXT, created INTEGER NOT NULL, PRIMARY KEY(match_id,round,slot));
+  CREATE INDEX IF NOT EXISTS agent_decisions_day ON agent_decisions(source,created);
+  CREATE TABLE IF NOT EXISTS agent_notes(character TEXT NOT NULL, match_id TEXT NOT NULL, created INTEGER NOT NULL, note TEXT NOT NULL, PRIMARY KEY(character,match_id));`);
   return db;
 }
 export type DB = ReturnType<typeof database>;

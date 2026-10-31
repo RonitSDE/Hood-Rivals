@@ -1509,6 +1509,106 @@ label {
   }
 }
 
+/* ---------- AI captains (0G Compute) ---------- */
+.thought-feed {
+  margin-top: 16px;
+  padding: 22px;
+}
+.thought-feed h3 {
+  margin: 0 0 12px;
+  font-size: 20px;
+}
+.thought-round + .thought-round {
+  margin-top: 14px;
+}
+.thought {
+  margin-top: 8px;
+  padding: 10px 12px;
+  background: var(--sea-deep);
+  border-left: 3px solid var(--shoal);
+}
+.thought .thought-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  font-size: 14px;
+}
+.thought .thought-head span:not(.thought-source) {
+  color: var(--mist);
+}
+.thought p {
+  margin: 6px 0 0;
+  color: var(--foam);
+  font-size: 14px;
+}
+.thought-source {
+  margin-left: auto;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  clip-path: var(--step-s);
+}
+.thought-source.ai {
+  background: #1b3a2a;
+  color: var(--moss);
+}
+.thought-source.rules {
+  background: var(--deep-2);
+  color: var(--dim);
+}
+.thought-empty {
+  color: var(--dim);
+  margin: 0;
+}
+.arena-panel {
+  padding: 22px;
+}
+.arena-panel h3 {
+  margin: 0 0 10px;
+}
+.arena-captain {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 12px;
+  padding: 10px 12px;
+  margin-top: 8px;
+  background: var(--sea-deep);
+  border-left: 3px solid var(--shoal);
+}
+.arena-captain span,
+.arena-captain small {
+  color: var(--dim);
+  font-size: 13px;
+}
+.arena-captain strong {
+  grid-row: span 2;
+  align-self: center;
+  color: var(--sand);
+}
+.arena-panel .row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+.ai-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  font-size: 14px;
+  color: var(--mist);
+  cursor: pointer;
+}
+.ai-toggle input {
+  width: 18px;
+  height: 18px;
+  min-height: 0;
+  padding: 0;
+  accent-color: var(--moss);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -1517,4 +1617,11 @@ label {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+.hero-buttons {
+  flex-wrap: wrap;
+}
+.hero-buttons button {
+  white-space: nowrap;
 }

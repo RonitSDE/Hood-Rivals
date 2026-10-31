@@ -10,6 +10,7 @@ import { market } from "./market";
 import { shop } from "./shop";
 import { ClientError } from "./errors";
 import { staticAssets, MISSING_BUILD_PAGE } from "./static";
+import { agentAIConfig, createAgentRuntime, zeroGBrain, type AgentAIConfig, type Brain } from "./agents";
 import {
   createGame,
   resolveRound,
@@ -19,7 +20,6 @@ import {
   type GameState,
 } from "../shared/game";
 import { matchRecap } from "../shared/experience";
-import { agentOrder, type AgentStyle } from "../shared/agent";
 import { SHOP_ITEMS, ECONOMY } from "../shared/economy";
 import { advanceMissions, buildBeacon, launchMission, missionBoard, verifyMission } from './missions';
 const digest = (s: string) => createHash("sha256").update(s).digest("hex");
@@ -32,11 +32,24 @@ const orderSchema = z
     partner: z.number().int().min(0).max(2).optional(),
   })
   .strict();
-export function createApp(c: Config = config) {
+export function createApp(
+  c: Config = config,
+  deps: { agentAI?: AgentAIConfig; brain?: Brain | null } = {},
+) {
   if(c.agentId && !isAddress(c.agentId)) throw Error('Invalid AGENT_ID_ADDRESS');
   const db = database(c.db),
     app = express(),
     store = shop(db, c);
+  // AI captains on 0G Compute. Without ZG_COMPUTE_API_KEY they play with the rule-based policy.
+  const aiConfig = deps.agentAI ?? agentAIConfig();
+  const agents = createAgentRuntime({
+    db,
+    config: aiConfig,
+    brain: deps.brain !== undefined ? deps.brain : aiConfig.enabled ? zeroGBrain(aiConfig) : null,
+    onSettled: (id) => advance(id),
+  });
+  /** Minimum time a round stays open for matches that are watched rather than played. */
+  const paceFor = (row: any) => (row.mode === "arena" ? aiConfig.arenaRoundMs : row.control === "agent" ? 1800 : 0);
   app.disable("x-powered-by");
   const proxyHops=Number(process.env.TRUST_PROXY_HOPS||0);
   if(!Number.isInteger(proxyHops)||proxyHops<0||proxyHops>5) throw Error("Invalid TRUST_PROXY_HOPS");
@@ -195,6 +208,7 @@ export function createApp(c: Config = config) {
       market: await market(db, c),
       shop: { ...store.status(), items: SHOP_ITEMS, rivalEnabled: !!c.tokenUnitsPerDollar },
       release: { version: "2.4.0", build: process.env.BUILD_SHA || "development" },
+      ai: { enabled: agents.enabled, provider: "0G Compute", model: agents.enabled ? aiConfig.model : null },
       economy: ECONOMY,
       chain: {
         id: c.chainId,
@@ -385,7 +399,9 @@ export function createApp(c: Config = config) {
     const players = db
       .prepare("SELECT * FROM players WHERE match_id=?")
       .all(row.id) as any[];
+    agents.remember(row, players, s);
     for (const p of players) {
+      if (p.slot < 0) continue; // Arena spectator
       if (
         db
           .prepare("SELECT 1 FROM results WHERE match_id=? AND user_id=?")
@@ -427,19 +443,20 @@ export function createApp(c: Config = config) {
       const ps = db
         .prepare("SELECT * FROM players WHERE match_id=?")
         .all(id) as any[];
-      if(row.control==='agent'&&Date.now()<row.deadline)return;
-      if (ps.some((p) => !p.order_json && !(row.control==='agent'&&p.user_id===row.host)) && (row.mode === "training" || Date.now() < row.deadline)) return;
       const s: GameState = JSON.parse(row.state);
-      const agent=row.agent_token_id?db.prepare('SELECT style,played FROM agent_memories WHERE token_id=?').get(row.agent_token_id) as any:null;
+      const ai = agents.slots(row, ps, s);
+      const aiSlots = new Set(ai.map((a) => a.slot));
+      agents.schedule(row, ps, s);
+      const opened = row.round_started ?? row.created;
+      if (paceFor(row) && Date.now() < row.deadline) return; // watched matches: let each round be seen
+      if (!agents.settled(id, s.round, ai) && Date.now() < opened + aiConfig.timeoutMs + 1500) return;
+      const waitingForHumans = ps.some((p) => p.slot >= 0 && !aiSlots.has(p.slot) && !p.order_json);
+      if (waitingForHumans && (row.mode === "training" || Date.now() < row.deadline)) return;
       const orders = s.factions.map((_, slot) => {
+        const robot = ai.find((a) => a.slot === slot);
+        if (robot) return agents.orderFor(id, s, robot);
         const p = ps.find((p) => p.slot === slot);
-        return p
-          ? p.order_json
-            ? JSON.parse(p.order_json)
-            : row.control==='agent'&&p.user_id===row.host&&agent
-              ? agentOrder(s,slot,agent.style as AgentStyle,agent.played)
-              : { type: "hold" }
-          : botOrder(s, slot);
+        return p ? (p.order_json ? JSON.parse(p.order_json) : { type: "hold" }) : botOrder(s, slot);
       });
       const out = resolveRound(s, orders),
         previous = row.digest || "",
@@ -453,18 +470,47 @@ export function createApp(c: Config = config) {
         previous,
         proof,
       );
+      const watched = paceFor(row) > 0;
       db.prepare(
-        "UPDATE matches SET state=?,status=?,deadline=?,digest=? WHERE id=?",
-      ).run(serialized, out.status, Date.now() + (row.control==='agent'?1800:c.roundMs), proof, id);
+        "UPDATE matches SET state=?,status=?,deadline=?,digest=?,round_started=? WHERE id=?",
+      ).run(serialized, out.status, Date.now() + (watched ? paceFor(row) : c.roundMs), proof, Date.now(), id);
       db.prepare("UPDATE players SET order_json=NULL WHERE match_id=?").run(id);
       if (out.status === "finished") finish(row, out);
+      else agents.schedule({ ...row, state: serialized }, ps, out);
     });
   }
   app.post("/api/matches", async (req: any, res) => {
     const b = z
-      .object({ mode: z.enum(["solo", "weekly", "room", "training"]).default("solo"),control:z.enum(['human','agent']).default('human') })
+      .object({
+        mode: z.enum(["solo", "weekly", "room", "training", "arena"]).default("solo"),
+        control: z.enum(["human", "agent"]).default("human"),
+        rivals: z.enum(["classic", "ai"]).default("classic"),
+      })
       .parse(req.body);
     const u = user(req);
+    if (b.mode === "arena") {
+      // Arena: three AI captains play while this player watches. One running Arena per player.
+      const running = db
+        .prepare("SELECT m.id FROM matches m JOIN players p ON p.match_id=m.id WHERE p.user_id=? AND m.mode='arena' AND m.status='active' LIMIT 1")
+        .get(u.id) as any;
+      if (running) return res.json({ id: running.id, resumed: true });
+      const today = new Date(new Date().toISOString().slice(0, 10)).getTime();
+      const started = db
+        .prepare("SELECT COUNT(*) AS n FROM matches WHERE host=? AND mode='arena' AND created>=?")
+        .get(u.id, today) as any;
+      if (Number(started.n) >= aiConfig.arenaPerUserPerDay)
+        return res.status(429).json({ error: "You have watched today's Arena matches. New ones open tomorrow (UTC)." });
+      const id = randomUUID();
+      const s = createGame(uid(), undefined, undefined, await market(db, c));
+      tx(db, () => {
+        db.prepare(
+          "INSERT INTO matches(id,code,host,mode,status,state,deadline,created,control,rivals,round_started) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+        ).run(id, randomBytes(4).toString("hex").toUpperCase(), u.id, "arena", "active", JSON.stringify(s), Date.now() + aiConfig.arenaRoundMs, Date.now(), "human", "ai", Date.now());
+        db.prepare("INSERT INTO players(match_id,slot,user_id) VALUES (?,?,?)").run(id, -1, u.id);
+      });
+      advance(id);
+      return res.json({ id });
+    }
     if(b.control==='agent'&&b.mode!=='solo')return res.status(400).json({error:'Delegation is available only in solo play'});
     let agentTokenId:number|null=null;
     if(b.control==='agent'){
@@ -479,7 +525,7 @@ export function createApp(c: Config = config) {
       return res.status(409).json({error:"Create your captain before entering a match"});
     const active: any = db
       .prepare(
-        "SELECT m.id FROM matches m JOIN players p ON p.match_id=m.id WHERE p.user_id=? AND m.status IN ('active','lobby') ORDER BY m.created DESC LIMIT 1",
+        "SELECT m.id FROM matches m JOIN players p ON p.match_id=m.id WHERE p.user_id=? AND p.slot>=0 AND m.status IN ('active','lobby') ORDER BY m.created DESC LIMIT 1",
       )
       .get(u.id);
     if (active) return res.json({ id: active.id, resumed: true });
@@ -488,7 +534,7 @@ export function createApp(c: Config = config) {
     const snapshot = await market(db, c);
     const out = tx(db, () => {
       // Recheck after the asynchronous market lookup, inside the write transaction.
-      const resumed = db.prepare("SELECT m.id FROM matches m JOIN players p ON p.match_id=m.id WHERE p.user_id=? AND m.status IN ('active','lobby') LIMIT 1").get(u.id) as any;
+      const resumed = db.prepare("SELECT m.id FROM matches m JOIN players p ON p.match_id=m.id WHERE p.user_id=? AND p.slot>=0 AND m.status IN ('active','lobby') LIMIT 1").get(u.id) as any;
       if (resumed) return {id:resumed.id,resumed:true};
       if (
         b.mode === "weekly" &&
@@ -528,7 +574,7 @@ export function createApp(c: Config = config) {
       const code = randomBytes(4).toString("hex").toUpperCase();
       const status = b.mode === "room" ? "lobby" : "active";
       db.prepare(
-        "INSERT INTO matches(id,code,host,mode,status,state,deadline,created,control,agent_token_id) VALUES (?,?,?,?,?,?,?,?,?,?)",
+        "INSERT INTO matches(id,code,host,mode,status,state,deadline,created,control,agent_token_id,rivals,round_started) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
       ).run(
         id,
         code,
@@ -540,6 +586,8 @@ export function createApp(c: Config = config) {
         Date.now(),
         b.control,
         agentTokenId,
+        b.mode === "solo" ? b.rivals : "classic",
+        Date.now(),
       );
       db.prepare(
         "INSERT INTO players(match_id,slot,user_id) VALUES (?,?,?)",
@@ -548,6 +596,7 @@ export function createApp(c: Config = config) {
         db.prepare("INSERT INTO attempts VALUES (?,?,?)").run(u.id, day, id);
       return { id, code };
     });
+    if (!("resumed" in out)) advance(out.id); // starts AI decisions for round one
     res.json(out);
   });
   app.post("/api/rooms/join", (req: any, res) => {
@@ -591,7 +640,7 @@ export function createApp(c: Config = config) {
     res.json(result);
   });
   app.post("/api/matches/:id/leave", (req: any, res) => {
-    const result = db.prepare("UPDATE matches SET status='cancelled' WHERE id=? AND host=? AND (mode='training' OR status='lobby') AND status IN ('active','lobby')")
+    const result = db.prepare("UPDATE matches SET status='cancelled' WHERE id=? AND host=? AND (mode IN ('training','arena') OR status='lobby') AND status IN ('active','lobby')")
       .run(req.params.id,user(req).id);
     if (!result.changes) return res.status(403).json({error:"Only your practice or unstarted room can be closed"});
     res.json({closed:true});
@@ -642,8 +691,28 @@ export function createApp(c: Config = config) {
       .get(req.params.id, user(req).id);
     if (!row || !p) return res.status(404).json({ error: "Match not found" });
     const last=row.control==='agent'&&row.agent_token_id?db.prepare('SELECT orders,round FROM snapshots WHERE match_id=? ORDER BY round DESC LIMIT 1').get(row.id) as any:null;
+    const state: GameState = JSON.parse(row.state);
+    const spectator = p.slot < 0;
+    const players = db.prepare("SELECT * FROM players WHERE match_id=?").all(row.id) as any[];
+    const ai = agents.slots(row, players, state);
+    // Reasoning is revealed without breaking fog of war: spectators see resolved rounds, players
+    // see their own delegated agent, and everyone sees every captain's thoughts once it is over.
+    const finished = row.status !== "active";
+    const revealed = finished || spectator ? undefined : new Set(ai.filter((a) => a.slot === p.slot).map((a) => a.slot));
+    const throughRound = finished ? Infinity : spectator ? state.round - 1 : state.round;
     res.json({
-      ...viewGame(JSON.parse(row.state), p.slot),
+      ...(spectator && !finished
+        ? { ...state, you: -1, visible: state.tiles.map((t) => t.id), submitted: false }
+        : viewGame(state, p.slot)),
+      spectator,
+      rivals: row.rivals,
+      ai: {
+        enabled: agents.enabled,
+        model: agents.enabled ? aiConfig.model : null,
+        captains: ai.map((a) => ({ slot: a.slot, name: a.character.name, style: a.character.style })),
+        thinking: spectator || revealed?.size ? agents.progress(row.id, state.round, ai.filter((a) => !revealed || revealed.has(a.slot))) : [],
+        thoughts: revealed && !revealed.size ? [] : agents.thoughts(row.id, state, { throughRound, slots: revealed }),
+      },
       id: row.id,
       code: row.code,
       status: row.status,
@@ -708,7 +777,9 @@ export function createApp(c: Config = config) {
         digest(p.previous + p.orders + p.state) === p.digest;
       previous = p.digest;
     }
+    const replayState: GameState = JSON.parse(row.state);
     res.json({
+      thoughts: agents.thoughts(row.id, replayState, { throughRound: Infinity }),
       id: row.id,
       verified: valid && previous === row.digest,
       verification:
@@ -793,7 +864,7 @@ export function createApp(c: Config = config) {
   const interval = setInterval(() => {
     try { advanceMissions(db); } catch(e) { console.error('Mission resolution failed',e); }
     for (const row of db
-      .prepare("SELECT id FROM matches WHERE status='active' AND mode!='training' AND deadline<=?")
+      .prepare("SELECT id FROM matches WHERE status='active' AND (mode='arena' OR control='agent' OR (mode!='training' AND deadline<=?))")
       .all(Date.now()) as any[]) {
       try {
         advance(row.id);

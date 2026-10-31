@@ -42,6 +42,20 @@ function useAppController() {
   const [setupLater, setSetupLater] = useState(false);
   const [walletStage, setWalletStage] = useState("");
   const [guideHidden, setGuideHidden] = useState(false);
+  // Rival captains in solo play: AI characters on 0G Compute, or the classic rule-based rivals.
+  const [aiRivals, setAiRivalsState] = useState(() => {
+    try {
+      return localStorage.getItem("hood-rivals-ai-rivals") !== "off";
+    } catch {
+      return true;
+    }
+  });
+  const setAiRivals = (on: boolean) => {
+    setAiRivalsState(on);
+    try {
+      localStorage.setItem("hood-rivals-ai-rivals", on ? "on" : "off");
+    } catch {}
+  };
   const [boot, setBoot] = useState<any>(),
     [game, setGame] = useState<any>(),
     [match, setMatch] = useState(""),
@@ -199,7 +213,8 @@ function useAppController() {
   }, [game?.status, game?.id]);
   const start = (mode: string, control: "human" | "agent" = "human") =>
     run(async () => {
-      const r = await api("/matches", { mode, control });
+      const rivals = mode === "solo" && aiRivals && boot?.ai?.enabled ? "ai" : "classic";
+      const r = await api("/matches", { mode, control, rivals });
       setGame(await api("/matches/" + r.id));
       setMatch(r.id);
       setOrder({ type: "scout" });
@@ -360,6 +375,8 @@ function useAppController() {
       await refresh();
     });
   return {
+    aiRivals,
+    setAiRivals,
     accountOpen,
     agent,
     agentContract,

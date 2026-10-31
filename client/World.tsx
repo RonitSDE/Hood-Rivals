@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { FACTIONS, hash } from "../shared/game";
+import { buildWorldArt, stamp } from "./worldArt";
+
+/** Roof colours of each faction's hall, as on the living island. */
+const ROOFS = ["#c2412b", "#2f6db0", "#b98a24"];
 
 type WorldProps = {
   game: any;
@@ -16,61 +20,6 @@ const HH = 16;
 const LIFT = 8;
 const place = (q: number, r: number) => ({ x: (q - r) * HW, y: (q + r) * HH });
 
-function fillDiamond(ctx: CanvasRenderingContext2D, cx: number, cy: number, color: string, hw = HW, hh = HH) {
-  ctx.fillStyle = color;
-  const top = Math.round(cy - hh);
-  const bot = Math.round(cy + hh);
-  for (let y = top; y <= bot; y++) {
-    const span = Math.max(0, Math.round(hw * (1 - Math.abs(y - cy) / hh)));
-    ctx.fillRect(Math.round(cx) - span, y, Math.max(1, span * 2), 1);
-  }
-}
-
-function pine(ctx: CanvasRenderingContext2D, x: number, y: number, n: number) {
-  const pal =
-    n % 2 ? ["#1b3826", "#2a5634", "#3b743b", "#5a9348"] : ["#173424", "#24503a", "#33704a", "#4d8d5b"];
-  ctx.fillStyle = "#4b3121";
-  ctx.fillRect(x - 1, y - 6, 2, 6);
-  ctx.fillStyle = "#36231a";
-  ctx.fillRect(x, y - 6, 1, 6);
-  for (let layer = 2; layer >= 0; layer--) {
-    const top = y - 20 + layer * 5;
-    for (let row = 0; row < 6; row++) {
-      const width = Math.max(1, 3 + (2 - layer) * 2 - Math.floor(row / 2));
-      ctx.fillStyle = row > 4 ? pal[0] : row < 2 ? pal[3] : row % 2 ? pal[1] : pal[2];
-      ctx.fillRect(x - width, top + row, width * 2 + 1, 1);
-    }
-  }
-}
-
-function rocks(ctx: CanvasRenderingContext2D, x: number, y: number, n: number) {
-  const cols = ["#8d877f", "#6e6963", "#a39c93"];
-  for (let i = 0; i < 3; i++) {
-    const w = 5 + ((n + i) % 3);
-    const h = 4 + (i % 2);
-    ctx.fillStyle = cols[(n + i) % 3];
-    ctx.fillRect(x - 7 + i * 5, y - h - (i === 1 ? 2 : 0), w, h);
-    ctx.fillStyle = "#534e49";
-    ctx.fillRect(x - 7 + i * 5, y - 1, w, 1);
-  }
-}
-
-function house(ctx: CanvasRenderingContext2D, x: number, y: number, color: string) {
-  ctx.fillStyle = "rgba(10,8,6,.35)";
-  ctx.fillRect(x - 9, y - 1, 18, 3);
-  ctx.fillStyle = "#6b5344";
-  ctx.fillRect(x - 8, y - 16, 16, 14);
-  ctx.fillStyle = "#4a3428";
-  ctx.fillRect(x - 8, y - 16, 3, 14);
-  ctx.fillStyle = color;
-  ctx.fillRect(x - 10, y - 22, 20, 7);
-  ctx.fillStyle = "#1a1412";
-  ctx.fillRect(x - 10, y - 16, 20, 1);
-  ctx.fillRect(x - 2, y - 8, 4, 6);
-  ctx.fillStyle = "#f3e2b0";
-  ctx.fillRect(x + 3, y - 13, 3, 3);
-}
-
 function banner(ctx: CanvasRenderingContext2D, x: number, y: number, color: string, tall = false) {
   const pole = tall ? 28 : 20;
   ctx.fillStyle = "#4b3121";
@@ -79,17 +28,6 @@ function banner(ctx: CanvasRenderingContext2D, x: number, y: number, color: stri
   ctx.fillRect(x + 2, y - pole + 2, tall ? 12 : 10, tall ? 8 : 6);
   ctx.fillStyle = "#1a1412";
   ctx.fillRect(x + 2, y - pole + 6, tall ? 12 : 10, 1);
-}
-
-function crystal(ctx: CanvasRenderingContext2D, x: number, y: number) {
-  ctx.fillStyle = "#6b5344";
-  ctx.fillRect(x - 6, y - 8, 12, 7);
-  ctx.fillStyle = "#4a3428";
-  ctx.fillRect(x - 6, y - 8, 2, 7);
-  ctx.fillStyle = "#9fe7d8";
-  ctx.fillRect(x - 2, y - 16, 4, 8);
-  ctx.fillStyle = "#dff8f2";
-  ctx.fillRect(x - 1, y - 15, 1, 4);
 }
 
 function captain(
@@ -170,12 +108,26 @@ export function World({ game, cosmetic, selected, reachable, onSelect, onHover }
       "Isometric frontier. Drag to pan, scroll to zoom, click a hex to inspect.",
     );
     const night = cosmetic === "moonwatch";
-    const grass = night
-      ? ["#24384a", "#2c4658", "#1d3040", "#345066"]
-      : ["#3b743b", "#4d8d4b", "#356e38", "#5a9348"];
-    const side = night ? "#1a2c3c" : "#3d5c34";
+    const art = buildWorldArt({
+      HW,
+      HH,
+      night,
+      factions: FACTIONS.map((f, i) => ({ color: f.color, roof: ROOFS[i] })),
+    });
     const points: Record<string, { x: number; y: number }> = {};
     for (const tile of game.tiles) points[tile.id] = place(tile.q, tile.r);
+    // Sea, foam and a sand beach that follow the board's coastline, painted once.
+    const SEA = { x: -480, y: -300, w: 960, h: 600 };
+    const coast = (x: number, y: number) => {
+      let best = Infinity;
+      for (const id in points) {
+        const p = points[id];
+        const d = Math.abs(x - p.x) / HW + Math.abs(y - (p.y - LIFT + art.DEPTH / 2)) / HH - 1;
+        if (d < best) best = d;
+      }
+      return best * HH * 1.4;
+    };
+    const sea = art.sea(SEA.w, SEA.h, SEA.x, SEA.y, coast);
     const ordered = [...game.tiles].sort(
       (a, b) => points[a.id].y - points[b.id].y || points[a.id].x - points[b.id].x,
     );
@@ -339,64 +291,52 @@ export function World({ game, cosmetic, selected, reachable, onSelect, onHover }
       cam.y = Math.max(-160, Math.min(160, cam.y));
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.imageSmoothingEnabled = false;
-      ctx.fillStyle = night ? "#14283c" : "#1e4a70";
+      ctx.fillStyle = night ? "#0e2236" : "#1e4a72";
       ctx.fillRect(0, 0, width, height);
       ctx.save();
       ctx.translate(width / 2, height / 2);
       ctx.scale(cam.zoom, cam.zoom);
       ctx.translate(-cam.x, -cam.y);
+      ctx.drawImage(sea, SEA.x, SEA.y);
       if (!reduced) {
         for (const spark of sparkles) {
           const drift = Math.sin(time * 0.001 + spark.phase) * 4;
           ctx.fillStyle = night ? "rgba(186,214,232,.45)" : "rgba(214,236,246,.55)";
-          ctx.fillRect(Math.round(spark.x + drift), Math.round(spark.y), 2, 1);
+          ctx.fillRect(Math.round(spark.x * 1.6 + drift), Math.round(spark.y * 1.6), 2, 1);
         }
       }
-      // Shallows and a sand shore that trace the board's outline, in the living island's palette.
-      for (const tile of ordered) {
-        const pos = points[tile.id];
-        fillDiamond(ctx, pos.x, pos.y - LIFT + 12, night ? "#1a3a52" : "#2a6688", HW + 16, HH + 8);
-      }
-      for (const tile of ordered) {
-        const pos = points[tile.id];
-        fillDiamond(ctx, pos.x, pos.y - LIFT + 11, night ? "#24384c" : "#b9a26c", HW + 7, HH + 4);
-        fillDiamond(ctx, pos.x, pos.y - LIFT + 9, night ? "#2e4258" : "#d9c48c", HW + 6, HH + 3);
-      }
-
+      const wave = Math.floor(time / 380) % 2;
       for (const tile of ordered) {
         const pos = points[tile.id];
         const topY = pos.y - LIFT;
         const n = hash(tile.id);
-        const fog = tile.kind === "fog";
-        fillDiamond(ctx, pos.x, topY + 7, fog ? "#243246" : side);
-        fillDiamond(ctx, pos.x, topY, fog ? "#44586c" : grass[n % grass.length]);
-        if (!fog && n % 5 === 0) {
-          ctx.fillStyle = night ? "#1a3144" : "#2a5634";
-          ctx.fillRect(pos.x - 4 + (n % 7), topY - 2, 2, 1);
-        }
-        if (!fog && tile.owner >= 0 && tile.kind !== "base") {
-          ctx.fillStyle = FACTIONS[tile.owner].color;
-          ctx.fillRect(pos.x - 4, topY + HH - 3, 8, 2);
-        }
-        if (fog) {
-          ctx.fillStyle = "rgba(214,226,236,.35)";
-          ctx.fillRect(pos.x - 6, topY - 2, 4, 2);
-          ctx.fillRect(pos.x + 3, topY + 1, 3, 2);
+        if (tile.kind === "fog") {
+          ctx.drawImage(art.fog[n % art.fog.length], pos.x - HW, topY - HH);
           continue;
         }
+        ctx.drawImage(art.tiles[tile.kind as keyof typeof art.tiles][n % 4], pos.x - HW, topY - HH);
+        if (tile.owner >= 0 && tile.kind !== "base") outline(ctx, pos.x, topY, FACTIONS[tile.owner].color);
         if (tile.kind === "forest") {
-          pine(ctx, pos.x - 8, topY + 4, n);
-          pine(ctx, pos.x + 7, topY + 6, n + 1);
-          if (n % 2) pine(ctx, pos.x, topY + 2, n + 2);
-        } else if (tile.kind === "rock") rocks(ctx, pos.x, topY + 6, n);
-        else if (tile.kind === "cache") crystal(ctx, pos.x, topY + 8);
+          const trees = [art.pine[n % 5], art.round[(n >>> 3) % 6], art.pine[(n >>> 5) % 5]];
+          stamp(ctx, trees[0], pos.x - 12, topY + 2);
+          stamp(ctx, trees[1], pos.x + 10, topY + 4);
+          if (n % 3) stamp(ctx, trees[2], pos.x - 1, topY + 10);
+        } else if (tile.kind === "rock") {
+          stamp(ctx, art.boulder[n % 3], pos.x - 8, topY + 2);
+          stamp(ctx, art.boulder[(n >>> 2) % 3], pos.x + 9, topY + 6);
+        } else if (tile.kind === "cache") stamp(ctx, art.supplies, pos.x, topY + 8);
         else if (tile.kind === "base") {
-          const color = FACTIONS[Math.max(0, tile.owner)].color;
-          house(ctx, pos.x, topY + 8, color);
-          banner(ctx, pos.x + 12, topY + 6, color, true);
+          const owner = Math.max(0, tile.owner);
+          stamp(ctx, art.hall[owner], pos.x, topY + 14);
+          stamp(ctx, art.flag[owner][wave], pos.x + 20, topY + 6);
         } else if (tile.kind === "flag") {
-          banner(ctx, pos.x - 2, topY + 8, tile.owner >= 0 ? FACTIONS[tile.owner].color : "#d9c195", true);
-        }
+          stamp(
+            ctx,
+            tile.owner >= 0 ? art.flag[tile.owner][wave] : art.neutralFlag[wave],
+            pos.x - 2,
+            topY + 6,
+          );
+        } else if (n % 4 === 0) stamp(ctx, art.bush[n % 2], pos.x + ((n >>> 4) % 20) - 10, topY + 4);
       }
 
       if (night) {
@@ -464,7 +404,7 @@ export function World({ game, cosmetic, selected, reachable, onSelect, onHover }
       ctx.restore();
 
       ctx.imageSmoothingEnabled = true;
-      ctx.font = "600 11px Inter, sans-serif";
+      ctx.font = "600 11px 'Chakra Petch', sans-serif";
       ctx.textAlign = "center";
       for (const tile of game.tiles) {
         if (tile.kind !== "base" || tile.owner < 0) continue;

@@ -62,6 +62,20 @@ npm run economics
 npm run contracts:compile
 ```
 
+## AI captains (0G Compute)
+
+Rival captains, delegated Agent IDs and the **AI Arena** (three AI captains, you watch) can think with a model on [0G Compute](https://docs.0g.ai/developer-hub/building-on-0g/compute-network/overview.md). Set `ZG_COMPUTE_API_KEY` (and optionally `ZG_COMPUTE_MODEL`) in `.env`; without a key every agent uses the built-in rule-based policy.
+
+How a turn works (`server/agents/`):
+
+1. `moves.ts` lists every legal order for the captain, described only with what it can see (fog of war).
+2. `prompt.ts` adds the rules, the character's personality (`characters.ts`) and its memories from past matches.
+3. `brain.ts` sends one request to the 0G Compute Router (OpenAI-compatible, `verify_tee` on).
+4. `decide.ts` accepts only a move number from the list; the server still re-checks it with `validateOrder`.
+5. `runtime.ts` stores each decision and its reason in `agent_decisions`. Anything slow, invalid, failed or over the daily budget is played by the rule-based policy and labelled as such. After a match each AI character writes a note to `agent_notes`, which later prompts include.
+
+Reasoning is revealed without breaking fog of war: Arena spectators see each round after it resolves, players see their own delegated agent, and everyone sees all reasoning once a match is over and in replays.
+
 ## Developer launch order
 
 1. Deploy gameplay on HTTPS with a persistent volume. Follow `docs/DEPLOYMENT.md`; one application replica only.

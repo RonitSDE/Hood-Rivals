@@ -7,11 +7,14 @@ import { preview } from "../lib/constants";
 import { navigate } from "../router";
 import { api } from "../lib/api";
 import { useApp } from "../app/AppState";
+import { ThoughtFeed } from "./ThoughtFeed";
 
 /** The tactical board, shared by /play (live match) and /replay/:id (step-through replay). */
 export function TacticsView({ isReplay = false }: { isReplay?: boolean }) {
   const {
     agent,
+    aiRivals,
+    setAiRivals,
     boot,
     busy,
     changeControl,
@@ -43,15 +46,17 @@ export function TacticsView({ isReplay = false }: { isReplay?: boolean }) {
   const self = game?.factions?.[game.you],
     showGame = !isReplay && game,
     shown = isReplay && replay ? { ...replay.snapshots[step]?.state, you: 0 } : showGame ? game : preview;
+  // Spectators (AI Arena) have no captain of their own, so nothing below applies to them.
+  const playing = game?.status === "active" && !game?.spectator;
   const chosenTile = shown.tiles?.find((t: any) => t.id === selected);
   const legalTargets =
-    game?.status === "active" && ["scout", "contest"].includes(order.type)
+    playing && ["scout", "contest"].includes(order.type)
       ? game.tiles
           .filter((t: any) => !validateOrder(game, game.you, { ...order, target: t.id }))
           .map((t: any) => t.id)
       : [];
   const availableAction =
-    game?.status === "active" && selected
+    playing && selected
       ? !validateOrder(game, game.you, { type: "contest", target: selected })
         ? "contest"
         : !validateOrder(game, game.you, { type: "scout", target: selected })
@@ -60,17 +65,17 @@ export function TacticsView({ isReplay = false }: { isReplay?: boolean }) {
       : null;
   const selectHex = (id: string) => {
     setSelected(id);
-    if (game?.status !== "active" || game.submitted) return;
+    if (!playing || game.submitted) return;
     if (["scout", "contest"].includes(order.type) && !validateOrder(game, game.you, { ...order, target: id }))
       return;
     if (!validateOrder(game, game.you, { type: "contest", target: id })) setOrder({ type: "contest" });
     else if (!validateOrder(game, game.you, { type: "scout", target: id })) setOrder({ type: "scout" });
   };
   const plannedOrder = { ...order, target: selected || undefined };
-  const orderIssue = game?.status === "active" ? validateOrder(game, game.you, plannedOrder) : null;
-  const orderCost = game?.status === "active" ? cost(game, game.you, plannedOrder) : 0;
-  const recap = game?.status === "finished" ? matchRecap(game.events, game.you) : null;
-  const guide = game?.status === "active" && game.mode === "training" ? trainingMove(game, game.you) : null;
+  const orderIssue = playing ? validateOrder(game, game.you, plannedOrder) : null;
+  const orderCost = playing ? cost(game, game.you, plannedOrder) : 0;
+  const recap = game?.status === "finished" && !game?.spectator ? matchRecap(game.events, game.you) : null;
+  const guide = playing && game.mode === "training" ? trainingMove(game, game.you) : null;
   return (
     <main id="main-content" className={"frontier " + (showGame ? "in-match" : "")}>
       {room && !showGame && !isReplay && (
@@ -100,32 +105,45 @@ export function TacticsView({ isReplay = false }: { isReplay?: boolean }) {
         {showGame ? (
           <>
             <div className="eyebrow">
-              {game.mode === "training"
-                ? "Guided practice"
-                : game.mode === "weekly"
-                  ? "Daily ranked challenge"
-                  : "Live frontier"}
+              {game.spectator
+                ? "AI Arena"
+                : game.mode === "training"
+                  ? "Guided practice"
+                  : game.mode === "weekly"
+                    ? "Daily ranked challenge"
+                    : "Live frontier"}
               , room {game.code}
+              {game.rivals === "ai" && !game.spectator ? ", AI rivals" : ""}
             </div>
             <h1>
-              {game.status === "lobby"
-                ? "Gather your rivals."
-                : game.status === "finished"
+              {game.spectator
+                ? game.status === "finished"
                   ? game.winner === -1
-                    ? "A divided frontier."
-                    : game.winner === game.you
-                      ? "The frontier is yours."
-                      : "A rival takes the frontier."
-                  : "Every order leaves a mark."}
+                    ? "No captain broke the tie."
+                    : `${game.factions[game.winner]?.captain} takes the frontier.`
+                  : "Three AI captains. One frontier."
+                : game.status === "lobby"
+                  ? "Gather your rivals."
+                  : game.status === "finished"
+                    ? game.winner === -1
+                      ? "A divided frontier."
+                      : game.winner === game.you
+                        ? "The frontier is yours."
+                        : "A rival takes the frontier."
+                    : "Every order leaves a mark."}
             </h1>
             <p>
-              {game.status === "lobby"
-                ? "Share your room code. The host can start with up to three players; empty seats become agents."
-                : game.status === "finished"
-                  ? "The match is complete. Your captain carries this history into the next encounter."
-                  : game.mode === "training"
-                    ? "Take your time. Follow the field guide, then choose your own orders."
-                    : "Commit one order. Rivals plan at the same time. Unsubmitted orders hold when the timer expires."}
+              {game.spectator
+                ? game.ai?.enabled
+                  ? `Each captain reads only what it can see and decides with ${game.ai.model} on 0G Compute. Their reasoning appears after every round.`
+                  : "AI is offline, so the captains are playing with the built-in rule-based policy."
+                : game.status === "lobby"
+                  ? "Share your room code. The host can start with up to three players; empty seats become agents."
+                  : game.status === "finished"
+                    ? "The match is complete. Your captain carries this history into the next encounter."
+                    : game.mode === "training"
+                      ? "Take your time. Follow the field guide, then choose your own orders."
+                      : "Commit one order. Rivals plan at the same time. Unsubmitted orders hold when the timer expires."}
             </p>
           </>
         ) : isReplay ? (
@@ -162,7 +180,23 @@ export function TacticsView({ isReplay = false }: { isReplay?: boolean }) {
               <button className="secondary" onClick={() => start("room")}>
                 Play with friends
               </button>
+              <button className="secondary" disabled={busy} onClick={() => start("arena")}>
+                Watch an AI match
+              </button>
             </div>
+            <label className="ai-toggle">
+              <input
+                type="checkbox"
+                checked={!!boot.ai?.enabled && aiRivals}
+                disabled={!boot.ai?.enabled}
+                onChange={(e) => setAiRivals(e.target.checked)}
+              />
+              <span>
+                {boot.ai?.enabled
+                  ? `AI rival captains (${boot.ai.model} on 0G Compute)`
+                  : "AI rival captains are offline; rivals use the classic rules"}
+              </span>
+            </label>
             <div className="micro">
               No wallet needed <span>·</span> six rounds <span>·</span> three factions
             </div>
@@ -202,7 +236,47 @@ export function TacticsView({ isReplay = false }: { isReplay?: boolean }) {
             )}
           </section>
         )}
-        {showGame && game.status === "active" && (
+        {showGame && game.spectator && (
+          <section className="panel arena-panel">
+            <h3>Captains</h3>
+            {game.factions.map((f: any) => {
+              const thinking = game.ai?.thinking?.find((t: any) => t.slot === f.id)?.thinking;
+              return (
+                <div className="arena-captain" key={f.id} style={{ borderColor: FACTIONS[f.id].color }}>
+                  <b style={{ color: FACTIONS[f.id].color }}>{f.captain}</b>
+                  <span>{FACTIONS[f.id].name}</span>
+                  <strong>{f.score} Renown</strong>
+                  <small>{game.status !== "active" ? "" : thinking ? "Thinking…" : "Order sealed"}</small>
+                </div>
+              );
+            })}
+            {game.status === "active" && <p className="micro">Round {game.round} of 6</p>}
+            <div className="row">
+              {game.status === "active" ? (
+                <button disabled={busy} onClick={leave}>
+                  Stop watching
+                </button>
+              ) : (
+                <>
+                  <button className="primary" disabled={busy} onClick={() => start("arena")}>
+                    Watch another
+                  </button>
+                  <button onClick={() => openReplay(game.id)}>Replay with reasoning</button>
+                </>
+              )}
+            </div>
+          </section>
+        )}
+        {showGame && game.spectator && (
+          <ThoughtFeed
+            thoughts={game.ai?.thoughts ?? []}
+            empty="Reasoning appears once the first round resolves."
+          />
+        )}
+        {showGame && !game.spectator && game.status === "active" && game.ai?.thoughts?.length > 0 && (
+          <ThoughtFeed thoughts={game.ai.thoughts} title="Your agent's reasoning" />
+        )}
+        {showGame && !game.spectator && game.status === "active" && (
           <section className="order-card">
             {guide && !guideHidden && (
               <div className="training-guide" role="region" aria-label="Practice guidance">
@@ -415,7 +489,10 @@ export function TacticsView({ isReplay = false }: { isReplay?: boolean }) {
             )}
           </section>
         )}
-        {showGame && game.status === "finished" && recap && (
+        {showGame && !game.spectator && game.status === "finished" && game.ai?.thoughts?.length > 0 && (
+          <ThoughtFeed thoughts={game.ai.thoughts} title="How the AI captains thought" />
+        )}
+        {showGame && !game.spectator && game.status === "finished" && recap && (
           <section className="panel battle-recap">
             <span className="eyebrow">
               {game.mode === "training" ? "Practice complete" : "Your battle report"}
@@ -485,6 +562,12 @@ export function TacticsView({ isReplay = false }: { isReplay?: boolean }) {
               />
             </label>
             <p className="hash">SHA-256 {replay.digest}</p>
+            {replay.thoughts?.length > 0 && (
+              <ThoughtFeed
+                thoughts={replay.thoughts.filter((t: any) => t.round <= (replay.snapshots[step]?.round ?? 0))}
+                title="Captain reasoning so far"
+              />
+            )}
             <button
               onClick={() => {
                 const blob = new Blob([JSON.stringify(replay, null, 2)], {
@@ -581,7 +664,11 @@ export function TacticsView({ isReplay = false }: { isReplay?: boolean }) {
         <div className="map-caption">
           <span>Scout, develop, contest.</span>
           <span>
-            {showGame ? "Tap a glowing hex to plan your order" : "Drag to move, select a hex to inspect"}
+            {showGame && game.spectator
+              ? "Watching AI captains"
+              : showGame
+                ? "Tap a glowing hex to plan your order"
+                : "Drag to move, select a hex to inspect"}
           </span>
         </div>
         {showGame && (
